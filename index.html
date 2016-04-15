@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Predicting High Cost Patients by Xiner-Shirley-Paula</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Predicting High Cost Patients</h1>
+      <h2 class="project-tagline">Our Final Project for  Introduction to Data Science: BIO 260 and CSCI E107</h2>
+      <a href="https://github.com/Xiner-Shirley-Paula/DataScienceFinalProject" class="btn">View on GitHub</a>
+      <a href="https://github.com/Xiner-Shirley-Paula/DataScienceFinalProject/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/Xiner-Shirley-Paula/DataScienceFinalProject/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h1>
+
+<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here <a href="https://guides.github.com/features/mastering-markdown/">using GitHub Flavored Markdown</a>, select a template crafted by a designer, and publish. After your page is generated, you can check out the new <code>gh-pages</code> branch locally. If you’re using GitHub Desktop, simply sync your repository and you’ll see the new branch.</p>
+
+<h2>
+<a id="overview-and-motivation" class="anchor" href="#overview-and-motivation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Overview and Motivation</h2>
+
+<p>The rising cost of healthcare is one of the world’s most important problems. Healthcare policy researchers have devoted much effort toward finding solutions to the fast growth in health care spending over the past decades. Research has provided evidence that the growth is linked to modifiable population risk factors such as obesity and stress. Rising disease prevalence and new medical treatments account for nearly two-thirds of the rising spending. As Massachusetts residents, we are directly concerned with how the state controls its healthcare cost. As one article in Boston Globe put it, “The soaring costs of insuring the state’s poorest residents drove health care spending in Massachusetts up 4.8 percent last year, double the rate of growth in 2013, dealing a setback to the state’s efforts to contain medical costs.” </p>
+
+<p>Therefore, predicting such costs with accuracy is a significant first step in address this problem, and may reveal insights into the nature of the key drivers of costs.</p>
+
+<h3>
+<a id="our-goals-were" class="anchor" href="#our-goals-were" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Our Goals were</h3>
+
+<p>1) to utilize regression-based methods and modern machine learning techniques to identify high-cost patients and predict their cost of care based on past year cost data and medical information (we define high cost patient as Medicare beneficiaries in MA with top 10% most expensive spending under Medicare part A and B coverage); </p>
+
+<p>2) to obtain more accurate prediction by dividing health cost into buckets (potentially 5 buckets) from high to low, and predict patients most likely cost buckets in the second year based on past year cost data and medical information;</p>
+
+<p>3) to identify the factors that are most influential in determining which patients will be high cost.</p>
+
+<h2>
+<a id="related-work" class="anchor" href="#related-work" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Related Work</h2>
+
+<p>Task: Anything that inspired you, such as a paper, a web site, or something we discussed in class.</p>
+
+<h2>
+<a id="initial-questions" class="anchor" href="#initial-questions" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Initial Questions</h2>
+
+<p>Task: What questions are you trying to answer? How did these questions evolve over the course of the project? What new questions did you consider in the course of your analysis?</p>
+
+<h2>
+<a id="data" class="anchor" href="#data" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Data</h2>
+
+<p>We collected 20% sample of Massachusetts Medicare Fee-For-Service Beneficiaries with their healthcare cost breaking into different settings where their medical utilization occur. </p>
+
+<p>The original data source comes from Medicare Claims Data Set (from Centers for Medicare and Medicaid). The original data files we derived our analytic dataset from included: Denominator File, Inpatient File, Outpatient Fil, Carrier File, Skilled Nursing Facility File, Hospice File, Home Health Agency File, and Durable Medical Equipment File. They cover all medical claims and associated costs for Medicare FFS beneficiaries, except drugs which we did not incorporate into our analyses, because we are interested in medical cost only. </p>
+
+<h3>
+<a id="data-preparation" class="anchor" href="#data-preparation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Data preparation</h3>
+
+<p>We used a 20% sample of Massachusetts Medicare Fee-For-Service Beneficiaries and claims associated with them in 2012 and 2013 (2011 is our first year and 2012 is our second year). We did not have individual identifiable information. Since the original dataset was at claim-level, we had to do some pre-processing and wrangling to get our final dataset, which is at beneficiary-level (or patient-level). Our analytic dataset will includes the following information: Diagnosis Clinical Classification, Procedure Clinical Classification, Medical utilizations (hospitalization, outpatient visits, physician visits, and more detailed utilization categories), Medical costs (in each setting), patient age, patient gender, and patient race. These were our features for prediction.</p>
+
+<h2>
+<a id="exploratory-analysis" class="anchor" href="#exploratory-analysis" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Exploratory Analysis</h2>
+
+<p>Task: What visualizations did you use to look at your data in different ways? What are the different statistical methods you considered? Justify the decisions you made, and show any major changes to your ideas. How did you reach these conclusions?</p>
+
+<h3>
+<a id="modeling" class="anchor" href="#modeling" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Modeling</h3>
+
+<h4>
+<a id="objective-1-to-predict-high-cost-patients-versus-non-high-cost-patients-we-will-compare-several-regression-and-machine-learning-methods" class="anchor" href="#objective-1-to-predict-high-cost-patients-versus-non-high-cost-patients-we-will-compare-several-regression-and-machine-learning-methods" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Objective 1: To predict high cost patients versus non-high cost patients. We will compare several regression and machine learning methods.</h4>
+
+<p>Logistic Regression 
+Naive Bayes Classification 
+Decision Tree
+Support Vector Machine 
+Linear Discriminative Analysis or Quadratic Discriminative Analysis
+Random Forest</p>
+
+<h4>
+<a id="objective-2-to-identify-features-that-are-most-influential-in-determining-which-patients-will-be-high-cost" class="anchor" href="#objective-2-to-identify-features-that-are-most-influential-in-determining-which-patients-will-be-high-cost" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Objective 2: To identify features that are most influential in determining which patients will be high cost.</h4>
+
+<p>Feature Selection or Dimension Reduction(Principal Component Analysis) </p>
+
+<h3>
+<a id="analysis" class="anchor" href="#analysis" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Analysis</h3>
+
+<p>Choose performance metrics 
+Compare performance of the different methods through cross-validation
+Test model sensitivity to changes in input / assumptions</p>
+
+<h2>
+<a id="final-analysis-and-predictions" class="anchor" href="#final-analysis-and-predictions" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Final Analysis and Predictions</h2>
+
+<p>Task: What did you learn about the data? How did you answer the questions? How can you justify your answers?
+Summarize and Visualize the highly influential factors from different predictive models
+If we have time, maybe we can see how variable this is, e.g., between different demographics or years</p>
+
+<h3>
+<a id="authors-and-contributors" class="anchor" href="#authors-and-contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Authors and Contributors</h3>
+
+<p>This project was created by Xiner (<a href="https://github.com/xz2315" class="user-mention">@xz2315</a>), Shirley(<a href="https://github.com/shirley-g" class="user-mention">@shirley-g</a>), and Paula (<a href="https://github.com/paulaj" class="user-mention">@paulaj</a>) for  BIO 260 and CSCI E107. </p>
+
+<h3>
+<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Support or Contact</h3>
+
+<p>Want to know more about this project? Check out our <a href="https://github.com/Xiner-Shirley-Paula/DataScienceFinalProject">documentation</a> or email <a href="mailto:paula.jacobso@gmail.com">paula.jacobso@gmail.com</a></p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/Xiner-Shirley-Paula/DataScienceFinalProject">Predicting High Cost Patients</a> is maintained by <a href="https://github.com/Xiner-Shirley-Paula">Xiner-Shirley-Paula</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
