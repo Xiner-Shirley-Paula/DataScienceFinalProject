@@ -31,13 +31,14 @@
 
 <p>Therefore, predicting such costs with accuracy is a significant first step in address this problem, and may reveal insights into the nature of the key drivers of costs.</p>
 
-<p><strong>Our goals were to:</strong>
-1. to utilize regression-based methods and modern machine learning techniques to identify high-cost patients and predict their cost of care based on past year cost data and medical information (we define high cost patient as Medicare beneficiaries in MA with top 10% most expensive spending under Medicare part A and B coverage); 
-2. to obtain more accurate prediction by dividing health cost into buckets (potentially 5 buckets) from high to low, and predict patients most likely cost buckets in the second year based on past year cost data and medical information;
-3. to identify the factors that are most influential in determining which patients will be high cost.</p>
+<p><strong>Our goals were to:</strong><br>
+1. to utilize regression-based methods and modern machine learning techniques to identify high-cost patients and predict their cost of care based on past year cost data and medical information (we define high cost patient as Medicare beneficiaries in MA with top 10% most expensive spending under Medicare part A and B coverage); <br>
+2. to obtain more accurate prediction by dividing health cost into buckets (potentially 5 buckets) from high to low, and predict patients most likely cost buckets in the second year based on past year cost data and medical information;<br>
+3. to identify the factors that are most influential in determining which patients will be high cost.<br></p>
 
-<p><strong>Related Work</strong>
-Task: Anything that inspired you, such as a paper, a web site, or something we discussed in class.</p>
+<p><strong>Related Work</strong><br>
+Task: Anything that inspired you, such as a paper, a web site, or something we discussed in class.
+<br></p>
 
 <h2>
 <a id="initial-questions" class="anchor" href="#initial-questions" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Initial Questions</h2>
@@ -51,7 +52,7 @@ Task: Anything that inspired you, such as a paper, a web site, or something we d
 
 <p>The original data source comes from Medicare Claims Data Set (from Centers for Medicare and Medicaid). The original data files we derived our analytic dataset from included: Denominator File, Inpatient File, Outpatient Fil, Carrier File, Skilled Nursing Facility File, Hospice File, Home Health Agency File, and Durable Medical Equipment File. They cover all medical claims and associated costs for Medicare FFS beneficiaries, except drugs which we did not incorporate into our analyses, because we are interested in medical cost only. </p>
 
-<p><strong>Data preparation</strong>
+<p><strong>Data preparation</strong><br>
 We used a 20% sample of Massachusetts Medicare Fee-For-Service Beneficiaries and claims associated with them in 2012 and 2013 (2011 is our first year and 2012 is our second year). We did not have individual identifiable information. Since the original dataset was at claim-level, we had to do some pre-processing and wrangling to get our final dataset, which is at beneficiary-level (or patient-level). Our analytic dataset will includes the following information: Diagnosis Clinical Classification, Procedure Clinical Classification, Medical utilizations (hospitalization, outpatient visits, physician visits, and more detailed utilization categories), Medical costs (in each setting), patient age, patient gender, and patient race. These were our features for prediction.</p>
 
 <h2>
