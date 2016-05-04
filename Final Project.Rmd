@@ -1,6 +1,6 @@
 ---
 title: "Predict Health-care Cost Among Medicare Beneficiaries in Massachusetts"
-author: "Xiner Zhou, Shirley Galbiati, Paula Jabos"
+author: "Xiner Zhou, Shirley Galbiati, Paula Jacobs"
 date: "May 04, 2016"
 output: 
   html_document: 
@@ -44,7 +44,7 @@ Our GitHub repository is: [GitHub](https://github.com/Xiner-Shirley-Paula/DataSc
 # Part 3: Import Analytic Data Set
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
-setwd("/Volumes/DISK_IMG/Data Science/DataScienceFinalProject")
+#setwd("/Volumes/DISK_IMG/Data Science/DataScienceFinalProject")
 #memory.limit(size=1000000)
 library(readr)
 library(dplyr)
@@ -54,35 +54,35 @@ library(infotheo)
 library(stringr)
 
 # 20% sample Massachussetts Medicare Covered Beneficiaries' demographic information
-patient <-read_csv("Patient.csv")
+patient <-read_csv("data/Patient.csv")
 patient <- patient %>%
    mutate(RACE=ifelse(race=="White",1, ifelse(race=="Black",2,ifelse(race=="Hispanic",3,4))))
  
 
 # Medical spending at 2013, some installpeople don't have record in this dataset simply because they didn't have any medical events/spending, so we need to replace NA with 0 later
-spending2013 <-read_csv("Spending2013.csv")
+spending2013 <-read_csv("data/Spending2013.csv")
 spending2013 <- spending2013%>% 
   select(BENE_ID, Spending2013)
 
 # Medical spending at 2012, some people don't have record in this dataset simply because they didn't have any medical events/spending, so we need to replace NA with 0 later
-spending2012 <-read_csv("Spending2012.csv")
+spending2012 <-read_csv("data/Spending2012.csv")
 spending2012 <- spending2012%>% 
   replace_na(list(IP=0, OP=0, Carrier=0, HHA=0, Hospice=0, SNF=0, DME=0)) %>% 
   mutate(Spending2012=IP+OP+Carrier+HHA+as.numeric(Hospice)+SNF+DME)%>%
   select(BENE_ID, Spending2012)
 
 # HCC indicators
-hcc <-read_csv("HCC.csv")
+hcc <-read_csv("data/HCC.csv")
 hcc<-hcc%>%rename(BENE_ID=bene_id)
-HCC.label <- read_csv("HCC_variable_list.csv") 
+HCC.label <- read_csv("data/HCC_variable_list.csv") 
 
 HCC.label$"HCC No."<-  word(HCC.label$"HCC No.",1)
 names(hcc)[match(HCC.label$"HCC No.", names(hcc))]<-  HCC.label$'HCC Name' 
 names(hcc)[-1]<-paste("Chronic Condition:", names(hcc)[-1], sep='')
 
 # Diagnosis Clinical Classification: This is clinically meaningful grouping for 14,000 diagnosis codes  into 200+ groups. This dataset contains one row per patient, with columns as number of diagnosis detected during the entire year for individual CCS, for example, if CCS1=10 for patient 1, it means that patient was diagnosed for 10 times by doctors having a condition broadly described as CCS1. The intuition here is that more diagnoses, more often that patient had a medical event adn thus more often cost would occur. CCS is related to HCC but not identical, because HCC only captures the chronical part of disease, but CCS captures both chronical and acute disease. For example, cancer is indicated by both HCC and CCS, but a hip/knee frature maybe only captureed by CCS. So you can imagine HCC and CCS related but not identical, we could explore how to incorporate them in model.
-dxccs <-read_csv("dxCCS.csv")
-dxccs.label<-read_csv("dxCCS_variable_list.csv") 
+dxccs <-read_csv("data/dxCCS.csv")
+dxccs.label<-read_csv("data/dxCCS_variable_list.csv") 
 # de-duplicate
 dxccs.label<- dxccs.label %>% filter(!duplicated(dxccs.label$"CCS Category" )) 
 # clean dxccs names
@@ -96,9 +96,9 @@ names(dxccs)[-1]<-paste("Diagnosis:", names(dxccs)[-1], sep='')
 
 
 # Procedure: This is clinically meaningful grouping for procedures codes. This dataset contains one row per patient, with columns as number of procedures performed during the entire year. For example, a patient could have 1 Anesthesia. The file is too large, I split into two.
-pr <-read_csv("Procedure.csv")
+pr <-read_csv("data/Procedure.csv")
 pr<-pr[,-ncol(pr)] # drop last column
-pr.label<-read_csv("Procedure_variable_list.csv")
+pr.label<-read_csv("data/Procedure_variable_list.csv")
 match.index<-match(pr.label$"betos", names(pr))
 pr.label<-pr.label[!is.na(match.index),]
 names(pr)[match.index[!is.na(match.index)]]<-  pr.label$"description"
@@ -200,7 +200,7 @@ patient.level%>%
 
 **The usual statistics Pearson's correlation coefficient is a measure of linear relationship for continuous variables, thus inappropriate for our case. We'll use "information gain" or "Entropy" as a measure of predictive power for individual feature.**
 
-![Definition of "Entropy" and "Information gain"](infogain.PNG). 
+![Definition of "Entropy" and "Information gain"](picture/infogain.PNG). 
 
 **Now, we rank individual clinical feature by "information gain".**
 
@@ -244,7 +244,12 @@ mi%>%
 
 ```
 
-**The question of feature selection is how many features should be included in our predictive models, and it is an issue of model complexity and will be chosen according to specific types of classification algorithms we introduce subsequently.**
+**The question of feature selection is how many features should be included in our predictive models, to save computation time, we use the top 100 features selected by entropy.**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=12, fig.height=12}
+mi%>% 
+    filter(order<=100)%>%select(var.name)
+```
+
 
 
 
@@ -323,7 +328,9 @@ predictors$feature.class <-rep(NA, length(predictors$var.name))
 predictors$feature.class[grep(pattern="Chronic.Condition", x=predictors$var.name)] <- "Chronic Condition"
 predictors$feature.class[grep(pattern="Diagnosis", x=predictors$var.name)] <- "Diagnosis"
 predictors$feature.class[grep(pattern="Procedure", x=predictors$var.name)] <- "Procedure"
-
+ 
+# features selected by LASSO
+predictors$var.name
 
 predictors%>%
   mutate(order=row_number())%>%
@@ -335,6 +342,7 @@ predictors%>%
     ggtitle("Feature Importance")+
   theme(legend.position='none')+
   xlim(c(-5,55)) 
+
 ```
 
 ** Now, We validate the model on the test set to see _Sensitivity_, _Specificity_, and _Accuracy_. Because the model is trained using misclassification error, the accuracy is higher than the other methods we have used, but the sensitivity is much lower.**
@@ -376,28 +384,28 @@ perf%>% na.omit()%>%
 
 ### Bayes-optimal classification rule
 
-![Definition of Bayes-optimal classification rule](Bayes Rule.PNG). 
+![Definition of Bayes-optimal classification rule](picture/Bayes Rule.PNG). 
 
 
-### Why Na?ve Bayes and Its Assumption
+### Why Naive Bayes and Its Assumption
 
-![Why Na?ve Bayes](Why Naive Bayes.PNG). 
+![Why Naive Bayes](picture/Why Naive Bayes.PNG). 
 
 ### Naive Bayes Model
 
-![Definition of Na?ve Bayes Model ](NB model 1.PNG). 
+![Definition of Na?ve Bayes Model ](picture/NB model 1.PNG). 
 
 We need to model the class-conditional probability distribution for each feature. Since all the features are categorical (binary), the Bernoulli distribution (or multinomial distribution in more general case) is an ideal first choice. We can think of the data sampled following the Bayes model intuitively as two steps:
 
 1. Randomly sample a patient from a Bernoulli process with probability p(Y=1), where Y=1 if the patient was high-cost in 2013
 2. Then the patient decide each of his/her feature (among demographic and clinical) from a Bernoulli dsitribution:
-![Step 2 model](NB model 2.PNG). 
+![Step 2 model](picture/NB model 2.PNG). 
  
 
 
 ### Parameter Estimation
  
-![NB estimation](NB Estimation.PNG).  
+![NB estimation](picture/NB Estimation.PNG).  
 
 
 ### Cross Validation  
@@ -726,11 +734,11 @@ perf%>% na.omit()%>%
 
 ### Pseudocode for AdaBoost
 
-![Pseudocode for AdaBoost](AdaBoost.PNG). 
+![Pseudocode for AdaBoost](picture/AdaBoost.PNG). 
 
 ### AdaBoost using Desicion Stump as Weak Learner
 
-![Weak Learner](AdaBoost Weak Learner.PNG). 
+![Weak Learner](picture/AdaBoost Weak Learner.PNG). 
 
 **To save computation time,we only include first 100 features selected by entropy.**
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
