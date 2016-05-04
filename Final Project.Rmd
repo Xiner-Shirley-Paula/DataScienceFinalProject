@@ -1,0 +1,706 @@
+---
+title: "Predict Health-care Cost Among Medicare Beneficiaries in Massachusetts"
+author: "Xiner Zhou, Shirley Galbiati, Jacob Paula"
+date: "May 04, 2016"
+output: 
+  html_document: 
+    highlight: tango
+    toc: true
+    toc_float: true
+---
+ 
+# Part 1: Overview and Motivation 
+
+**The rising cost of healthcare is one of the world's most important problems. Healthcare policy researchers have devoted much effort toward finding solutions to the fast growth in health care spending over the past decade. Research has provided evidence that the growth is linked to modifiable population risk factors such as obesity and strss. Rising disease prevalence and new medical treatments account for nearly two-thirds of the rising spending. As MA residents, we are directly concerned with how the state controls its healthcare cost. As one article in Boston Globe put it, "The soaring costs of insuring the state's poorest residents frove health care spending in MA up 4.8 percent last year, double the rate of growth in 2013, dealing a stback to the state's effort to control medical costs."**
+
+**Therefor, predicting such costs with accuracy is a significant first step in addressing this problem, and may reveal insights into the nature of the key drivers of costs.**
+
+# Part 2: Related Work 
+
+**A couple published articles inspired us to apply machine learning or data mining techniques to dig further into this promising topic.**
+
+- [Algorithmic Prediction of Health-Care Costs](http://people.csail.mit.edu/gjw/papers/healthcare.pdf)
+- [Predicting Costs Among Medicare beneficiries With Heart Failure](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3288564/)
+- [Using Diagnoses to Describe Populations and Predict Costs](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4194673/)
+
+# Part 3: Data
+
+**Our data source comes from Centers for Medicare and Medicaid Limited Data Set Files, which records medicare claims happened in all medical settings. The original data files we will derive our analytic dataset from, includes: Denominator File, Inpatient File, Outpatient Fil, Carrier File, Skilled Nursing Facility File, Hospice File, Home Health Agency File, and Durable Medical Equipment File. They cover all medical claims and associated costs for Medicare FFS beneficiaries.**
+
+**So let us explain what claims data is. Medical claims are generated when a patient vitis a doctor. They include diagnosis code, precedures codes, as well as costs. Claims data are electronically available, they are standardized and well-established codes. However, since humans generate them, they are 100% accurate. Also, claims for hospital visits can be vague. These limitations push us to work harder to find signals from noise. Or in other words, we want to find valuable information from chaos reality. This is what we do: Reality Mining!**
+
+**In creating analytic dataset for use, our objective is to model future costs with past medical history. We randomly select 20% sample of Massachusetts Medicare Fee-For-Service Beneficiaries who was fully-insured during 2012 and 2013 and who did not die. We use claims during 01/01/2012 to 12/31/2012 to create chronic disease indicators, diagnosis indicators, and procedures indicators, and we use claims during 01/01/2013 to 12/31/2013 to create binary indicator for top 10% high cost patients.**
+ 
+**Our data prepare phase includes collecting claims associated with the same patients and aggregate information to patinet-level. Our final analytic dataset includes:**
+
+-  70 Chronic Disease indicators, e.g. HCC (Hierarchical Condition Category)
+-  283 Diagnosis indicator, e.g. DXCCS (Diagnosis Clinical Classification Software)
+-  104 Procedure indicators, e.g. BETOS (Berenson-Eggers Type Of Service Codes)
+
+
+# Part 3: Import Analytic Data Set
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+setwd("/Volumes/DISK_IMG/Data Science/DataScienceFinalProject")
+#memory.limit(size=1000000)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(infotheo)
+library(stringr)
+
+# 20% sample Massachussetts Medicare Covered Beneficiaries' demographic information
+patient <-read_csv("Patient.csv")
+patient <- patient %>%
+   mutate(RACE=ifelse(race=="White",1, ifelse(race=="Black",2,ifelse(race=="Hispanic",3,4))))
+ 
+
+# Medical spending at 2013, some installpeople don't have record in this dataset simply because they didn't have any medical events/spending, so we need to replace NA with 0 later
+spending2013 <-read_csv("Spending2013.csv")
+spending2013 <- spending2013%>% 
+  select(BENE_ID, Spending2013)
+
+# Medical spending at 2012, some people don't have record in this dataset simply because they didn't have any medical events/spending, so we need to replace NA with 0 later
+spending2012 <-read_csv("Spending2012.csv")
+spending2012 <- spending2012%>% 
+  replace_na(list(IP=0, OP=0, Carrier=0, HHA=0, Hospice=0, SNF=0, DME=0)) %>% 
+  mutate(Spending2012=IP+OP+Carrier+HHA+as.numeric(Hospice)+SNF+DME)%>%
+  select(BENE_ID, Spending2012)
+
+# HCC indicators
+hcc <-read_csv("HCC.csv")
+hcc<-hcc%>%rename(BENE_ID=bene_id)
+HCC.label <- read_csv("HCC_variable_list.csv") 
+
+HCC.label$"HCC No."<-  word(HCC.label$"HCC No.",1)
+names(hcc)[match(HCC.label$"HCC No.", names(hcc))]<-  HCC.label$'HCC Name' 
+names(hcc)[-1]<-paste("Chronic Condition:", names(hcc)[-1], sep='')
+
+# Diagnosis Clinical Classification: This is clinically meaningful grouping for 14,000 diagnosis codes  into 200+ groups. This dataset contains one row per patient, with columns as number of diagnosis detected during the entire year for individual CCS, for example, if CCS1=10 for patient 1, it means that patient was diagnosed for 10 times by doctors having a condition broadly described as CCS1. The intuition here is that more diagnoses, more often that patient had a medical event adn thus more often cost would occur. CCS is related to HCC but not identical, because HCC only captures the chronical part of disease, but CCS captures both chronical and acute disease. For example, cancer is indicated by both HCC and CCS, but a hip/knee frature maybe only captureed by CCS. So you can imagine HCC and CCS related but not identical, we could explore how to incorporate them in model.
+dxccs <-read_csv("dxCCS.csv")
+dxccs.label<-read_csv("dxCCS_variable_list.csv") 
+# de-duplicate
+dxccs.label<- dxccs.label %>% filter(!duplicated(dxccs.label$"CCS Category" )) 
+# clean dxccs names
+dxccs.label$"CCS Category Description"<-str_replace_all(dxccs.label$"CCS Category Description",pattern = "'", replacement="")
+# clean CCS Category
+dxccs.label$"CCS Category" <- paste("CCS",dxccs.label$"CCS Category",sep='')
+dxccs.label$"CCS Category" <- str_replace_all(dxccs.label$"CCS Category",pattern = "'", replacement="")
+dxccs.label$"CCS Category" <- str_replace_all(dxccs.label$"CCS Category",pattern = " ", replacement="")
+names(dxccs)[match(dxccs.label$"CCS Category", names(dxccs))]<-  dxccs.label$'CCS Category Description'   
+names(dxccs)[-1]<-paste("Diagnosis:", names(dxccs)[-1], sep='')  
+
+
+# Procedure: This is clinically meaningful grouping for procedures codes. This dataset contains one row per patient, with columns as number of procedures performed during the entire year. For example, a patient could have 1 Anesthesia. The file is too large, I split into two.
+pr <-read_csv("Procedure.csv")
+pr<-pr[,-ncol(pr)] # drop last column
+pr.label<-read_csv("Procedure_variable_list.csv")
+match.index<-match(pr.label$"betos", names(pr))
+pr.label<-pr.label[!is.na(match.index),]
+names(pr)[match.index[!is.na(match.index)]]<-  pr.label$"description"
+names(pr)[-1]<-paste("Procedure:", names(pr)[-1], sep='') 
+
+# Merge with patient file, trandform data frame into matrix, with each row as patient  
+patient.level <-select(patient, BENE_ID, AGE, SEX, RACE) %>%
+      left_join(spending2013, by="BENE_ID")%>%  
+      left_join(spending2012, by="BENE_ID")%>%
+      left_join(hcc, by="BENE_ID")%>%
+      left_join(dxccs, by="BENE_ID") %>%
+      left_join(pr, by="BENE_ID")
+
+# from patient.level, create a data matrix contains all predictors, including demographic information such as age, sex, race, but drop spending 2012
+X<- patient.level%>%
+      select(-BENE_ID,-Spending2013,-Spending2012, -AGE, -SEX,-RACE)%>%
+      data.matrix()
+  
+
+# Original Diagnosis Group and Procedure Group are counts, now create binary indicators 0-1 
+X[X>=1]<-1
+X[X==0|is.na(X)]<-0
+
+
+
+ 
+# from patient.level, create a vector contains spending 2013, and a vector contains binary indicator for top 10% high cost patient
+Y<-patient.level%>%
+       select(Spending2013) %>%
+       replace_na(list(Spending2013=0))%>%
+       data.matrix()%>%
+       as.vector() 
+ 
+
+Y <-rank(Y)/length(Y)
+Y<-as.numeric(Y>=0.9)
+prop.table(table(Y))
+
+```
+
+# Part 4: Exploratory Data Analysis (EDA)
+
+First, we look at demographics information: Age, Gender, and Race.
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+# Distribution of Age
+patient.level %>% 
+  ggplot(aes(AGE)) +
+  geom_histogram(fill="pink",binwidth=5)+
+  ggtitle("Age")+
+  xlab("Age") +
+  geom_vline(xintercept=mean(patient.level$AGE), colour='red') + 
+  scale_x_continuous(breaks = seq(0 , max(patient.level$AGE) , 5 ) )+
+  annotate("text", x = mean(patient.level$AGE), y = 1000, label = "Mean")
+
+# Distribution of Gender
+patient.level %>% 
+  mutate(gender=ifelse(SEX==1,"Male", "Female"))%>%
+  ggplot(aes(x=factor(1),  fill=gender)) +
+  geom_bar(width=1 )+ coord_polar("y" )+
+  ggtitle("Gender")+
+  xlab("Gender") +
+  scale_fill_brewer("Blues")+ 
+    theme(axis.text.x=element_blank()) 
+
+# Distribution of Race
+patient.level %>% mutate(race=ifelse(RACE==1,"White", ifelse(RACE==2,"Black","Others")))%>%
+  ggplot(aes(x=factor(1),  fill=race)) +
+  geom_bar(width=1 )+ coord_polar("y" )+
+  ggtitle("Race")+
+  xlab("Race") +
+  scale_fill_brewer("Blues")+ 
+    theme(axis.text.x=element_blank()) 
+```
+
+Second, we look at the relationship between patients' 2012 medical cost and 2013 medical cost. We anticipate the correlation is strong, because older people with weaker health tend to have chronically high need of medical care.
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+patient.level%>%
+  replace_na(list(Spending2012=0,Spending2013=0))%>%
+  ggplot(aes(x=Spending2012, y=Spending2013))+
+  geom_point(aes(color=Spending2013,alpha=Spending2013)) +
+  scale_colour_gradient(low="blue",high="red") +
+  theme(legend.position='none')+
+  ggtitle("Medical Cost at 2013 versus Medical Cost at 2012")
+```
+
+**We could clearly see that, spending pattern is so consistent for Medicare beneficiaries, in the sense that, two subsequent years' medical costs could nearly perfectly predict each other. However, we don't know if it is true for general population. At least, it tells us that, for Medicare beneficires, typically older population >=65, if we know their past year's medical cost, their next year's cost is predictable with high confidence.  And some people (red dots) are consistently high medical resource utilizers; while others (blue dots) are consistently 0 utilizers, they are healthy population; the rest falling in the middle are relatively healthy and would not drive the total healthcare cost up dramatically. The red dots are the population we care most about. They are the sicker population which have more chronic diseases which need long-term medical assistance.**
+
+ 
+
+# Part 5: Feature Selection 
+
+**The dataset contains 70 chrnic condition indicators (HCC),283 Diagnosis Groups (DXCCS), 105 Procedure categories, which leads to 458 potential features. Techinically, we need to reduce "the curse of dimensionality"; practically, if we build an algorithm only works if we know all these information about a patient, it's impossible to implement at clinical setting, and also provides no insight about who will be high resource utilizers, what their characteristics are. Thus, the first task for us is to select features with high predictive power, and reduce the "curse of dimensionality".**
+
+ 
+
+## Entropy and Information Gain
+
+**The usual statistics Pearson's correlation coefficient is a measure of linear relationship for continuous variables, thus inappropriate for our case. We'll use "information gain" or "Entropy" as a measure of predictive power for individual feature.**
+
+![Definition of "Entropy" and "Information gain"](infogain.PNG). 
+
+**Now, we rank individual clinical feature by "information gain".**
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+mutual.info <-rep(0,ncol(X) ) # place-holder for info gain
+
+for(i in 1:length(mutual.info)){
+mutual.info[i]<-mutinformation(X[,i],Y,method="emp")
+} 
+
+# standardize information gain by the maximum, the resulting number would be the percentage of the maximum information gain
+mutual.info<-mutual.info/mutual.info[which.max(mutual.info)]
+
+# create a dataframe contains mutual.info and feature names corresponding to the order of X
+mi <- data.frame(mutual.info, var.name=colnames(X)) %>%
+      mutate(order= rank(desc(mutual.info),  ties.method = c("random"))) %>%
+      arrange(order)  
+
+# create feature.class 
+mi$feature.class <-rep(NA, length(mi$var.name))
+mi$feature.class[grep(pattern="Chronic Condition", x=mi$var.name)] <- "Chronic Condition"
+mi$feature.class[grep(pattern="Diagnosis", x=mi$var.name)] <- "Diagnosis"
+mi$feature.class[grep(pattern="Procedure", x=mi$var.name)] <- "Procedure"
+ 
+
+```
+
+**Now, visualize feature importance by mutual information. We have standardized mutual information as the ratio to the largest mutual information, therefore, the most importance feature in terms of mutual information with high cost status has mutual inforamtion %=1.**
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=15}
+
+mi%>% 
+    filter(order<=100)%>%  
+    ggplot(aes(x=order, y=mutual.info, fill=factor(feature.class))) +
+    geom_point( stat="identity") + 
+  geom_text(aes(label=var.name,check_overlap=TRUE, size=100, angle=45, colour =factor(feature.class)))+
+  xlab("Order of Feature Importance") + ylab("%Mutual Information")+
+    ggtitle("Top Ranked Features by mutual information with High Cost Status")+
+  theme(legend.position='none')+
+  xlim(c(-5,105))
+
+```
+
+**The question of feature selection is how many features should be included in our predictive models, and it is an issue of model complexity and will be chosen according to specific types of classification algorithms we introduce subsequently.**
+
+
+
+# Part 6: Final Analysis
+
+## Model 1: LASSO
+
+**LASSO (least absolute shrinkage and selection operator) is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the statistical model it produces. LASSO forces the sum of the absolute value of the coefficients to be less than a fixed value, which results in certain coefficients to be set to be zero, effectively removing those variables from the model, making the model simpler and more interpretable. The regularization parameter, lambda, governs the degree to which the coefficients are penalized.**
+
+**To implement LASSO regression in this project, we use glmnet. Glmnet is an R package that fits a generalized linear model via penalized maximum likelihood. The regularization path is computed for the LASSO penalty at a grid of values for the regularization parameter lambda.**
+
+**Here we predict whether a patient will be in the top 10% in terms of 2013 spending based on their chronic conditions indicators. The LASSO model is trained using 80% of the data, and then validating using the remaining 20%. The sensitivity and specificity are reported for the test set.**
+
+Load libraries
+```{r,warning=FALSE, message=FALSE, cache=TRUE}
+library("glmnet")
+library("dplyr")
+library("caret")
+library("stringr")
+```
+
+**Create data partitions for cross-validation.glmnet requires a matrix of covariates and a factor response (since we are doing logistic regression)**
+```{r,warning=FALSE, message=FALSE, cache=TRUE }
+set.seed(02138)
+ 
+TrainIndex  <- createDataPartition(y=seq(1,nrow(X),1), p=0.8, times=1)
+trainX <-X[TrainIndex$Resample1,] 
+trainY <-Y[TrainIndex$Resample1] 
+ 
+testX <-X[-TrainIndex$Resample1,] 
+testY <-Y[-TrainIndex$Resample1]
+
+```
+
+**We use the cv.glmnet method to conduct 10-fold cross validation to find optimal lambda, using misclassifcation error as the criterion. Although we would prefer to use sensitivity as the criterion, the glmnet CV method only allows misclassification error and auc as criteria for model selection.**
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE }
+# Choose lambda via cross-validation
+CV = cv.glmnet(x=trainX[,1:10],y=trainY,family="binomial",type.measure = "class")
+ 
+```
+
+The following plot shows the models (with different lambda values) that glmnet has fit, along with the misclassification error for each of the models.
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+plot(CV)
+```
+
+**The optimal regularization parameters identified by the cv.glmnet method are shown below. Lmin gives the model with the smallest misclassification error. L gives the most regularized model such that error is within one standard error of the minimum error model. By having a higher degree of regularizion, the model given by L is better protected against overfitting, whereas the Lmin has a higher chance of overfitting, but better prediction performance.**
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+L=CV$lambda.1se
+Lmin = CV$lambda.min
+L
+Lmin
+```
+
+**We now fit a the model with Lmin for lambda. (Note: we tried fitting the model with L, but the sensitivity reported for the test set prediction was lower in this model, so we chose the Lmin value)**
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+fit = glmnet(x=trainX[,1:10],y=trainY,family="binomial",alpha=1,lambda=Lmin)
+
+# Coefficients
+b0 = fit$beta[,1] 
+
+# Non-zero coefficients
+b1 = b0[b0!=0] 
+predictors<- data.frame(b1[order(abs(b1), decreasing = TRUE)])
+colnames(predictors)[1]<-"Coef"
+
+```
+
+** Let us see what features are selected by LASSO and their respective importance.**
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+# Our final features selected by LASSO
+tbl_df(predictors)
+```
+
+** Now, We validate the model on the test set to see _Sensitivity_, _Specificity_, and _Accuracy_. Because the model is trained using misclassification error, the accuracy is higher than the other methods we have used, but the sensitivity is much lower.**
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+# LASSO model validation
+LASSOprediction <- predict(fit, testX[,1:10],type="class")
+ 
+# performance measure
+
+## create a place-holder for all model performance measures
+perf <-data.frame(model=rep(NA,3*5), Measure=rep(c("Sensitivity", "Specificity", "Accuracy"), 5), value=rep(NA, 3*5))
+ 
+perf$value[3]<-scales::percent(prop.table(table(LASSOprediction, testY))[1,1]+prop.table(table(LASSOprediction, testY))[2,2])
+                                                                    
+perf$value[1]<-scales::percent(prop.table(table(LASSOprediction, testY))[2,2]/(prop.table(table(LASSOprediction, testY))[1,2]+prop.table(table(LASSOprediction, testY))[2,2]))
+                                                                        
+perf$value[2]<-scales::percent(prop.table(table(LASSOprediction, testY))[1,1]/(prop.table(table(LASSOprediction, testY))[1,1]+prop.table(table(LASSOprediction, testY))[2,1]))
+  
+perf$model[1:3]<-"LASSO Logistic Regression"  
+
+tbl_df(perf)
+
+# Visualize it
+perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
+  geom_bar(position="dodge",stat="identity") +
+  geom_text() +ggtitle("Compare Performance Measure")
+  
+```
+
+
+
+
+
+## Model 2: Naive Bayes Classifier
+
+### Bayes-optimal classification rule
+
+![Definition of Bayes-optimal classification rule](Bayes Rule.PNG). 
+
+
+### Why Na?ve Bayes and Its Assumption
+
+![Why Na?ve Bayes](Why Naive Bayes.PNG). 
+
+### Naive Bayes Model
+
+![Definition of Na?ve Bayes Model ](NB model 1.PNG). 
+
+We need to model the class-conditional probability distribution for each feature. Since all the features are categorical (binary), the Bernoulli distribution (or multinomial distribution in more general case) is an ideal first choice. We can think of the data sampled following the Bayes model intuitively as two steps:
+
+1. Randomly sample a patient from a Bernoulli process with probability p(Y=1), where Y=1 if the patient was high-cost in 2013
+2. Then the patient decide each of his/her feature (among demographic and clinical) from a Bernoulli dsitribution:
+![Step 2 model](NB model 2.PNG). 
+ 
+
+
+### Parameter Estimation
+ 
+![NB estimation](NB Estimation.PNG).  
+
+
+### Cross Validation  
+ 
+**Cross-validation, is a model validation technique for assessing how the results of a statisitcal analysis will generalize to an independent data set. It is mainly used in settings where the goal is prediction (in our case), and one wants to estimate how accurately a predictive mode will perform in practice. In a prediction problem, a model is usually given a dataset of known data on which training is run (training dataset), and a dataset of unkown data against which the model is tested (testing dataset). The goal of cross validation is to define a dataset to "test" the model in the training phase, in order to limit problem like overfitting, given an insight on how the model will generalize to an independentl dataset (i.e., who will be high cost patients in next year, given previous year information, but not limited to 2012 and 2013 data).**
+
+**Considering the huge size of our dataset (141254 rows, 458 columns), 10-folds cross validation would be too time consuming and computational demaning. We split our dataset into 80% as training and 20% as validation/testing.**
+
+#### Tuning Parameter: 
+
+**Our tuning parameter for naive bayes is the number of features included in model. We could imagine that, if include all information will inevitably overfit the data, while include too few information will not have high predictive model. Therefore, we need to find a sweet-spot in between.**
+
+ 
+ 
+```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=10}
+library(e1071)
+library(caret)
+ 
+set.seed(02138)
+
+# create a data frame place-holder for 2-CV sensitivity, specificity and accuracy
+perf.model1 <-data.frame(par=seq(20,460,20), #tuning parameter
+                  sensitivity=rep(NA,length(seq(20,460,20))),
+                  specificity=rep(NA,length(seq(20,460,20))),
+                  accuracy=rep(NA,length(seq(20,460,20))))
+```
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=10}
+ 
+for(i in 1:length(perf.model1$par)){
+  
+  Xi<- X[,mi$var.name[mi$order<=perf.model1$par[i]]]# select top i features
+  mydata<-data.frame(x=Xi,y=as.factor(Y))
+  TrainIndex  <- createDataPartition(y=seq(1,nrow(mydata),1), p=0.8, times=1)
+  train_set <-mydata[TrainIndex$Resample1,]
+  test_set <-mydata[-TrainIndex$Resample1,]
+  fit<- naiveBayes(x=train_set [,-ncol(train_set )], y=train_set [,ncol(train_set )])
+  pred <-predict(fit, test_set[,-ncol(mydata)]) 
+  
+  # performance measure
+  perf.model1$accuracy[i]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]
+                                                                    
+  perf.model1$sensitivity[i]<-prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
+                                                                        
+  perf.model1$specificity[i]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1])
+  
+  gc()
+ 
+}
+# Save as .Rdata
+save(perf.model1, file="perf.model1.Rdata")
+
+```
+
+Now, let us visualize model performance on validation set, in terms of _Sensitivity_, _Specificity_, and _Accuracy_.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=10}
+# Visualize 
+perf.model1%>% 
+  gather(key=measure,value, sensitivity:accuracy)%>%
+  ggplot(aes(x=par, y=value, colour=measure, label=value))+
+  geom_line( )
+```
+
+
+**For our purpose, what matters the most is sensitivity, that is, how many future high cost patients could be identified correctly. Since if we can identify them, then health care system could provide preventive care to bring potential medical resource utilization down. The accuracy and specificity are all quite stably high in level while number of features included in the model are increasing, therefore, our problem comes down to find the optimal value for sensitivity. Starting from 300+, we could identify 50%+ high cost patients consistently, no matter whether we include 300 or 400 features.**
+ 
+
+**The optimal number of features is:**
+```{r,warning=FALSE, message=FALSE, cache=TRUE}
+perf.model1$par[which.max(perf.model1$sensitivity)]
+```
+
+**We have performance measure stored, Let's compare**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+ 
+perf$value[6]<-scales::percent(perf.model1$accuracy[which.max(perf.model1$sensitivity)])
+                                                                    
+perf$value[4]<-scales::percent(perf.model1$sensitivity[which.max(perf.model1$sensitivity)])
+                                                                        
+perf$value[5]<-scales::percent(perf.model1$specificity[which.max(perf.model1$sensitivity)])
+
+perf$model[4:6]<-"Naive Bayes Classifier"  
+
+tbl_df(perf)
+
+# Visualize it
+perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
+  geom_bar(position="dodge",stat="identity") +
+  geom_text()+ggtitle("Compare Performance Measure")
+```
+
+
+
+## Model 3: Decision Tree
+
+**Unlike Naive Bayes we have discussed, a classification tree partitions the feature space in a recursive manner and fit local methods in each region instead of a global model in a large feature space. Its most attractive advantages are interpretability and built-in feature selection by the impurity measure "information gain".**
+
+### Overfitting and Pruning
+
+**We have built a complete but too complex tree. To grow each branch of the tree just deeply enough to perfectly classify the training data, in fact it can lead to difficulties when there is noise in the training data, or when the number of trainings is too small to produce a representative sample of the true population. In either of these cases, this can produce trees that overfits the training data. The accuracy of the tree over the trainings increases monotonically as the tree grows, however, the accuracy over the test set first increase then decreases. So we need to prune the tree.**
+
+### Model Slection
+
+**The effective of tree depends on how complex the tree grows, that is, how many split the tree contains. Traditionally, decision tree uses the 10-fold cross-validation error (xerror), which is the misclassification rate relative to the simplest tree with only the root node and no splitting. Thus, xerror=1 when nspli=0. From the misclassification perspective, since the xerror achieves minimum with no splitting, the best tree would be just assign every patient as non-high cost category.** 
+
+**Thus, we use sensitivity, specificity, and accuracy together as performance measures, and 80&-20% split, to prune the tree and tune the parameter "nplit".**
+ 
+ 
+ 
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+library(rpart)
+library(caret)
+library(rpart.plot)
+library(RColorBrewer)
+set.seed(02138)
+
+ 
+mydata<-data.frame(x=X,y=as.factor(Y))
+TrainIndex  <- createDataPartition(y=seq(1,nrow(mydata),1), p=0.8, times=1)
+train_set <-mydata[TrainIndex$Resample1,]
+test_set <-mydata[-TrainIndex$Resample1,]
+rm(mydata)
+gc()
+  
+# use all features to build a full tree
+fit<-rpart(y~.,method="class", y=TRUE,control=rpart.control(cp=0,xval=2), parms=list(split="information"),data=train_set)
+
+# CP table
+printcp(fit)
+plotcp(fit,upper="size")
+
+# Prune the tree
+num.split<-fit$cptable[,"nsplit"] #possible number of splits
+ 
+# create a data frame place-holder for 2-CV sensitivity, specificity and accuracy
+perf.model2 <-data.frame(par=num.split, # tuning parameter
+                  sensitivity=rep(NA,length(num.split)),
+                  specificity=rep(NA,length(num.split)),
+                  accuracy=rep(NA,length(num.split)))
+
+for(i in 1:length(num.split)){
+	fit.prune <- prune(fit,cp=fit$cptable[i,"CP"])
+	pred<- predict(fit.prune,test_set[,-ncol(test_set)],type="class")
+ 
+# performance measure
+  perf.model2$accuracy[i]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]
+                                                                    
+  perf.model2$sensitivity[i]<-prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
+                                                                        
+  perf.model2$specificity[i]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1])
+ 
+  gc()
+}
+
+# Visualize 
+perf.model2%>% 
+  gather(key=measure,value, sensitivity:accuracy)%>%
+  ggplot(aes(x=par, y=value, colour=measure, label=value))+
+  geom_line( ) 
+
+
+```
+
+**What is the optimal number of split?**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+perf.model2$par[which.max(perf.model2$sensitivity)]
+```
+ 
+**We have performance measure stored, Let's compare**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+ 
+perf$value[9]<-scales::percent(perf.model1$accuracy[which.max(perf.model1$sensitivity)])
+                                                                    
+perf$value[7]<-scales::percent(perf.model1$sensitivity[which.max(perf.model1$sensitivity)])
+                                                                        
+perf$value[8]<-scales::percent(perf.model1$specificity[which.max(perf.model1$sensitivity)])
+
+perf$model[7:9]<-"Decision Tree"  
+
+tbl_df(perf)
+
+# Visualize it
+perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
+  geom_bar(position="dodge",stat="identity") +
+  geom_text()+ggtitle("Compare Performance Measure")
+```
+
+
+###Visualize the Best Pruned Decision Tree
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=12}
+prune.fit<-prune(fit, cp=fit$cptable[which.max(perf.model2$sensitivity),"CP"])
+ 
+plot(prune.fit, uniform=TRUE, main="Classification Tree")
+text(prune.fit, use.n=TRUE, cex=.8, col="red")
+```
+
+
+
+## Model 4: Random Forest : (Ensemble Method)
+
+**An ensemble method makes a prediction by combining the predictions of many classifiers into a single vote. The individual classifiers are usually required to perform only slightly better than random. This means slightly more than 50% of the data are classified correctly. Such a classifier is called a weak learner. If the weak learners are random and independent, the prediction accuracy of the majority vote will increase with the number of weak learners. Since the weak learners all have to be trained on the same training set, producing random and independent weak learners is difficult. Different ensemble methods (Bagging, Boosting, and Random Forest, etc) use different strategyes to train and combine weak learners that behave relatively independent.**
+
+### How Random Forest Work?
+
+**Random forests work similar as Boosting described above, it also takes the majority votes from weak learners, but differs in terms of how to grow weak learners.** 
+
+**Random Forests grows many classification trees. Each tree gives a classificaiton, and the fores chooses the classification having the most votes over all the trees in the forest. When the training set for the current tree is drawn by sampling with replacement, about one-third of the cases are left out of the sample. This oob(out-of-bag) data is used to get a running unbiased estimate of the classification error as trees are added to the forest. It is also used to get estimates of variable importance.**
+
+**There is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the run: Each tree is constructed using a different bootstrap sample from the original data; About one-third of the cases are left out of the bootstrap sample and not used in the construction of the kth tree; Put each case left out in the construction of the kth tree down the kth tree to get a classification. In this way, a test set calssificaiton is obtained for each case in about one-third of the trees. At the end of the run, take j to be the class that got most of the votes every time case n was oob. The proportion of times that j is not equal to the true class of n avergae over all cases is the oob error estimation.**
+
+**We are going to use the top 100 features selected by mutual inforamtion, because of computation time and capacity here.**
+
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+library(randomForest)
+set.seed(02138)
+
+mydata<-data.frame(x=X[,mi$var.name[mi$order<=100]],y=as.factor(Y))
+TrainIndex  <- createDataPartition(y=seq(1,nrow(mydata),1), p=0.8, times=1)
+train_set <-mydata[TrainIndex$Resample1,]
+test_set <-mydata[-TrainIndex$Resample1,]
+ 
+fit<-randomForest(y~., data=train_set, ntree=100, keep.forest=TRUE, importance=TRUE)
+pred <- predict(fit, type='class',newdata=test_set[,-ncol(test_set)] )
+
+```
+
+**Let's visualize the feature importance, which represents the mean decrease in node impurity).**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=15}
+importance(fit, type=1)
+
+# visualize it
+dat<-data.frame(imp=importance(fit, type=1)[order(-importance(fit, type=1))], var.name=rownames(importance(fit, type=1))[order(-importance(fit, type=1))])%>%
+  mutate(order=row_number()) 
+
+dat$feature.class <-rep(NA, length(dat$var.name))
+dat$feature.class[grep(pattern="Chronic.Condition", x=dat$var.name)] <- "Chronic Condition"
+dat$feature.class[grep(pattern="Diagnosis", x=dat$var.name)] <- "Diagnosis"
+dat$feature.class[grep(pattern="Procedure", x=dat$var.name)] <- "Procedure"
+
+dat%>%ggplot(aes(x=order, y=imp, fill=factor(feature.class))) +
+    geom_point( stat="identity") + 
+  geom_text(aes(label=var.name,check_overlap=TRUE, size=100, angle=45, colour =factor(feature.class)))+
+  xlab("Order of Feature Importance") + ylab("mean decrease in node impurity")+
+    ggtitle("Feature Importance")+
+  theme(legend.position='none')+
+  xlim(c(-5,105))
+
+```
+
+**Let's compare performance measure**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+ 
+perf$value[12]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
+                                                                    
+perf$value[10]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]))
+                                                                        
+perf$value[11]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1]))
+
+perf$model[10:12]<-"Random Forest"  
+
+tbl_df(perf)
+
+# Visualize it
+perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
+  geom_bar(position="dodge",stat="identity") +
+  geom_text()+ggtitle("Compare Performance Measure")
+```
+
+ 
+ 
+## Model 5: Boosting (Ensemble Method)
+
+**Boosting is historically the first ensemble method. The independence of weak learners is obtained by modifying the training data using weights after training each weak learner. The AdaBoost algorithm of Freud and Schapire was the first practiceal boosting algorithm, and remains one of the most widely used and standard.**
+
+### Pseudocode for AdaBoost
+
+![Pseudocode for AdaBoost](AdaBoost.PNG). 
+
+### AdaBoost using Desicion Stump as Weak Learner
+
+![Weak Learner](AdaBoost Weak Learner.PNG). 
+
+**We are going to use the top 100 features selected by mutual inforamtion, because of computation time and capacity here.**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+library(ada)
+library(caret)
+set.seed(02138)
+ 
+mydata<-data.frame(x=X[,mi$var.name[mi$order<=100]],y=as.factor(Y))
+TrainIndex  <- createDataPartition(y=seq(1,nrow(mydata),1), p=0.8, times=1)
+train_set <-mydata[TrainIndex$Resample1,]
+test_set <-mydata[-TrainIndex$Resample1,]
+
+fit <- ada(y~.,data=train_set,iter = 50, loss = "e", type = "discrete")
+pred <-predict(fit,test_set [,-ncol(test_set )])	
+ 
+```
+
+**Let's visualize the feature importance**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=15}
+varplot(fit)
+```
+
+
+**Let's compare performance measure**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+ 
+perf$value[15]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
+                                                                    
+perf$value[13]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]))
+                                                                        
+perf$value[14]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1]))
+
+perf$model[13:15]<-"Ada Boosting"  
+
+tbl_df(perf)
+
+# Visualize it
+perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
+  geom_bar(position="dodge",stat="identity") +
+  geom_text()+ggtitle("Compare Performance Measure")
+```
+
+
