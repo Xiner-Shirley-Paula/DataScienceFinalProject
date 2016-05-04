@@ -1,6 +1,6 @@
 ---
 title: "Predict Health-care Cost Among Medicare Beneficiaries in Massachusetts"
-author: "Xiner Zhou, Shirley Galbiati, Jacob Paula"
+author: "Xiner Zhou, Shirley Galbiati, Paula Jabos"
 date: "May 04, 2016"
 output: 
   html_document: 
@@ -9,6 +9,9 @@ output:
     toc_float: true
 ---
  
+Our GitHub repository is: [GitHub](https://github.com/Xiner-Shirley-Paula/DataScienceFinalProject)
+------
+
 # Part 1: Overview and Motivation 
 
 **The rising cost of healthcare is one of the world's most important problems. Healthcare policy researchers have devoted much effort toward finding solutions to the fast growth in health care spending over the past decade. Research has provided evidence that the growth is linked to modifiable population risk factors such as obesity and strss. Rising disease prevalence and new medical treatments account for nearly two-thirds of the rising spending. As MA residents, we are directly concerned with how the state controls its healthcare cost. As one article in Boston Globe put it, "The soaring costs of insuring the state's poorest residents frove health care spending in MA up 4.8 percent last year, double the rate of growth in 2013, dealing a stback to the state's effort to control medical costs."**
@@ -171,9 +174,9 @@ patient.level %>% mutate(race=ifelse(RACE==1,"White", ifelse(RACE==2,"Black","Ot
     theme(axis.text.x=element_blank()) 
 ```
 
-Second, we look at the relationship between patients' 2012 medical cost and 2013 medical cost. We anticipate the correlation is strong, because older people with weaker health tend to have chronically high need of medical care.
+**Second, we look at the relationship between patients' 2012 medical cost and 2013 medical cost. We anticipate the correlation is strong, because older people with weaker health tend to have chronically high need of medical care.**
 
-```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=12, fig.height=12}
 patient.level%>%
   replace_na(list(Spending2012=0,Spending2013=0))%>%
   ggplot(aes(x=Spending2012, y=Spending2013))+
@@ -227,17 +230,17 @@ mi$feature.class[grep(pattern="Procedure", x=mi$var.name)] <- "Procedure"
 
 **Now, visualize feature importance by mutual information. We have standardized mutual information as the ratio to the largest mutual information, therefore, the most importance feature in terms of mutual information with high cost status has mutual inforamtion %=1.**
 
-```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=15}
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=12, fig.height=12}
 
 mi%>% 
-    filter(order<=100)%>%  
+    filter(order<=50)%>%  
     ggplot(aes(x=order, y=mutual.info, fill=factor(feature.class))) +
     geom_point( stat="identity") + 
   geom_text(aes(label=var.name,check_overlap=TRUE, size=100, angle=45, colour =factor(feature.class)))+
   xlab("Order of Feature Importance") + ylab("%Mutual Information")+
     ggtitle("Top Ranked Features by mutual information with High Cost Status")+
   theme(legend.position='none')+
-  xlim(c(-5,105))
+  xlim(c(-5,55))+ylim(c(-0.5,1.5))
 
 ```
 
@@ -266,12 +269,12 @@ library("stringr")
 **Create data partitions for cross-validation.glmnet requires a matrix of covariates and a factor response (since we are doing logistic regression)**
 ```{r,warning=FALSE, message=FALSE, cache=TRUE }
 set.seed(02138)
- 
+Xi<-X[,mi$var.name[mi$order<=100]]
 TrainIndex  <- createDataPartition(y=seq(1,nrow(X),1), p=0.8, times=1)
-trainX <-X[TrainIndex$Resample1,] 
+trainX <-Xi[TrainIndex$Resample1,] 
 trainY <-Y[TrainIndex$Resample1] 
  
-testX <-X[-TrainIndex$Resample1,] 
+testX <-Xi[-TrainIndex$Resample1,] 
 testY <-Y[-TrainIndex$Resample1]
 
 ```
@@ -280,7 +283,7 @@ testY <-Y[-TrainIndex$Resample1]
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE }
 # Choose lambda via cross-validation
-CV = cv.glmnet(x=trainX[,1:10],y=trainY,family="binomial",type.measure = "class")
+CV = cv.glmnet(x=trainX,y=trainY,family="binomial",type.measure = "class")
  
 ```
 
@@ -301,51 +304,68 @@ Lmin
 **We now fit a the model with Lmin for lambda. (Note: we tried fitting the model with L, but the sensitivity reported for the test set prediction was lower in this model, so we chose the Lmin value)**
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
-fit = glmnet(x=trainX[,1:10],y=trainY,family="binomial",alpha=1,lambda=Lmin)
+fit = glmnet(x=trainX,y=trainY,family="binomial",alpha=1,lambda=Lmin)
 
 # Coefficients
 b0 = fit$beta[,1] 
 
 # Non-zero coefficients
-b1 = b0[b0!=0] 
-predictors<- data.frame(b1[order(abs(b1), decreasing = TRUE)])
-colnames(predictors)[1]<-"Coef"
-
+b1 = b0[b0!=0]
+predictors<- data.frame(var.name=names(b1)[order(abs(b1), decreasing = TRUE)],Coef=b1[order(abs(b1), decreasing = TRUE)] )
+ 
 ```
 
 ** Let us see what features are selected by LASSO and their respective importance.**
 
-```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
-# Our final features selected by LASSO
-tbl_df(predictors)
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=12, fig.height=12}
+# Visualize it
+predictors$feature.class <-rep(NA, length(predictors$var.name))
+predictors$feature.class[grep(pattern="Chronic.Condition", x=predictors$var.name)] <- "Chronic Condition"
+predictors$feature.class[grep(pattern="Diagnosis", x=predictors$var.name)] <- "Diagnosis"
+predictors$feature.class[grep(pattern="Procedure", x=predictors$var.name)] <- "Procedure"
+
+
+predictors%>%
+  mutate(order=row_number())%>%
+  filter(order<=50)%>%
+  ggplot(aes(x=order, y=Coef, fill=factor(feature.class))) +
+    geom_point( stat="identity") + 
+  geom_text(aes(label=var.name,check_overlap=TRUE, size=100, angle=45, colour =factor(feature.class)))+
+  xlab("Order of Feature Importance") + ylab("LASSO Coefficients")+
+    ggtitle("Feature Importance")+
+  theme(legend.position='none')+
+  xlim(c(-5,55)) 
 ```
 
 ** Now, We validate the model on the test set to see _Sensitivity_, _Specificity_, and _Accuracy_. Because the model is trained using misclassification error, the accuracy is higher than the other methods we have used, but the sensitivity is much lower.**
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
 # LASSO model validation
-LASSOprediction <- predict(fit, testX[,1:10],type="class")
+LASSOprediction <- predict(fit, testX,type="class")
  
 # performance measure
 
 ## create a place-holder for all model performance measures
 perf <-data.frame(model=rep(NA,3*5), Measure=rep(c("Sensitivity", "Specificity", "Accuracy"), 5), value=rep(NA, 3*5))
  
-perf$value[3]<-scales::percent(prop.table(table(LASSOprediction, testY))[1,1]+prop.table(table(LASSOprediction, testY))[2,2])
+perf$value[3]<-prop.table(table(LASSOprediction, testY))[1,1]+prop.table(table(LASSOprediction, testY))[2,2]
                                                                     
-perf$value[1]<-scales::percent(prop.table(table(LASSOprediction, testY))[2,2]/(prop.table(table(LASSOprediction, testY))[1,2]+prop.table(table(LASSOprediction, testY))[2,2]))
+perf$value[1]<-prop.table(table(LASSOprediction, testY))[2,2]/(prop.table(table(LASSOprediction, testY))[1,2]+prop.table(table(LASSOprediction, testY))[2,2])
                                                                         
-perf$value[2]<-scales::percent(prop.table(table(LASSOprediction, testY))[1,1]/(prop.table(table(LASSOprediction, testY))[1,1]+prop.table(table(LASSOprediction, testY))[2,1]))
+perf$value[2]<-prop.table(table(LASSOprediction, testY))[1,1]/(prop.table(table(LASSOprediction, testY))[1,1]+prop.table(table(LASSOprediction, testY))[2,1])
   
 perf$model[1:3]<-"LASSO Logistic Regression"  
 
-tbl_df(perf)
+ 
 
 # Visualize it
-perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
-  geom_bar(position="dodge",stat="identity") +
-  geom_text() +ggtitle("Compare Performance Measure")
-  
+perf%>% na.omit()%>%
+  ggplot(aes(x=model, y=value,color=factor(model), label=value))+
+    geom_point() +
+  geom_text() +ggtitle("Compare Performance Measure")+
+  facet_grid(Measure~.,scales = "free_y")+
+  theme(legend.position="bottom")
+ 
 ```
 
 
@@ -399,13 +419,13 @@ library(caret)
 set.seed(02138)
 
 # create a data frame place-holder for 2-CV sensitivity, specificity and accuracy
-perf.model1 <-data.frame(par=seq(20,460,20), #tuning parameter
-                  sensitivity=rep(NA,length(seq(20,460,20))),
-                  specificity=rep(NA,length(seq(20,460,20))),
-                  accuracy=rep(NA,length(seq(20,460,20))))
+perf.model1 <-data.frame(par=seq(10,100,10), #tuning parameter
+                  sensitivity=rep(NA,length(seq(10,100,10))),
+                  specificity=rep(NA,length(seq(10,100,10))),
+                  accuracy=rep(NA,length(seq(10,100,10))))
 ```
 
-```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=10}
+```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
  
 for(i in 1:length(perf.model1$par)){
   
@@ -424,17 +444,16 @@ for(i in 1:length(perf.model1$par)){
                                                                         
   perf.model1$specificity[i]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1])
   
-  gc()
+  
  
 }
-# Save as .Rdata
-save(perf.model1, file="perf.model1.Rdata")
+ 
 
 ```
 
 Now, let us visualize model performance on validation set, in terms of _Sensitivity_, _Specificity_, and _Accuracy_.
 
-```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=10}
+```{r, warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
 # Visualize 
 perf.model1%>% 
   gather(key=measure,value, sensitivity:accuracy)%>%
@@ -454,20 +473,22 @@ perf.model1$par[which.max(perf.model1$sensitivity)]
 **We have performance measure stored, Let's compare**
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
  
-perf$value[6]<-scales::percent(perf.model1$accuracy[which.max(perf.model1$sensitivity)])
+perf$value[6]<-perf.model1$accuracy[which.max(perf.model1$sensitivity)]
                                                                     
-perf$value[4]<-scales::percent(perf.model1$sensitivity[which.max(perf.model1$sensitivity)])
+perf$value[4]<-perf.model1$sensitivity[which.max(perf.model1$sensitivity)]
                                                                         
-perf$value[5]<-scales::percent(perf.model1$specificity[which.max(perf.model1$sensitivity)])
+perf$value[5]<-perf.model1$specificity[which.max(perf.model1$sensitivity)]
 
 perf$model[4:6]<-"Naive Bayes Classifier"  
-
-tbl_df(perf)
-
+ 
 # Visualize it
-perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
-  geom_bar(position="dodge",stat="identity") +
-  geom_text()+ggtitle("Compare Performance Measure")
+perf%>% na.omit()%>%
+  ggplot(aes(x=model, y=value,color=factor(model), label=value))+
+    geom_point() +
+  geom_text() +ggtitle("Compare Performance Measure")+
+  facet_grid(Measure~.,scales = "free_y")+
+  theme(legend.position="bottom")
+ 
 ```
 
 
@@ -495,21 +516,22 @@ library(rpart.plot)
 library(RColorBrewer)
 set.seed(02138)
 
- 
-mydata<-data.frame(x=X,y=as.factor(Y))
+Xi<-X[,mi$var.name[mi$order<=100]] 
+mydata<-data.frame(x=Xi,y=as.factor(Y))
 TrainIndex  <- createDataPartition(y=seq(1,nrow(mydata),1), p=0.8, times=1)
 train_set <-mydata[TrainIndex$Resample1,]
 test_set <-mydata[-TrainIndex$Resample1,]
-rm(mydata)
-gc()
+ 
   
 # use all features to build a full tree
 fit<-rpart(y~.,method="class", y=TRUE,control=rpart.control(cp=0,xval=2), parms=list(split="information"),data=train_set)
 
 # CP table
-printcp(fit)
 plotcp(fit,upper="size")
+```
 
+**Now we are going to prune the tree using validation set.**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
 # Prune the tree
 num.split<-fit$cptable[,"nsplit"] #possible number of splits
  
@@ -530,7 +552,6 @@ for(i in 1:length(num.split)){
                                                                         
   perf.model2$specificity[i]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1])
  
-  gc()
 }
 
 # Visualize 
@@ -542,39 +563,83 @@ perf.model2%>%
 
 ```
 
-**What is the optimal number of split?**
+**The accuracy is going down with the number of splits increases, this is the problem of over-fitting the training set. But the sensitivity on validation set is going up with the complexity of the tree. Somewhat surprising. We will use the maximum complexity to achieve the maximum sensitivity on independent dataset.**
+
+**Prune the tree by sensitivity and predict on validation set.**
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
-perf.model2$par[which.max(perf.model2$sensitivity)]
+prune.fit<-prune(fit, cp=fit$cptable[which.max(perf.model2$sensitivity),"CP"])
+pred<- predict(prune.fit,test_set[,-ncol(test_set)],type="class")
 ```
- 
-**We have performance measure stored, Let's compare**
+
+**Let's see feature importance in terms of entropy.**
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
  
-perf$value[9]<-scales::percent(perf.model1$accuracy[which.max(perf.model1$sensitivity)])
-                                                                    
-perf$value[7]<-scales::percent(perf.model1$sensitivity[which.max(perf.model1$sensitivity)])
-                                                                        
-perf$value[8]<-scales::percent(perf.model1$specificity[which.max(perf.model1$sensitivity)])
+predictors<- data.frame(var.name=names(prune.fit$variable.importance)[order(abs(prune.fit$variable.importance), decreasing = TRUE)],entropy=prune.fit$variable.importance[order(abs(prune.fit$variable.importance), decreasing = TRUE)] ) 
+predictors$var.name<-gsub(pattern="x.", replacement="", x=predictors$var.name)
+ 
+# standardize information gain by the maximum, the resulting number would be the percentage of the maximum information gain
+predictors$entropy<-predictors$entropy/predictors$entropy[which.max(predictors$entropy)]
 
-perf$model[7:9]<-"Decision Tree"  
 
-tbl_df(perf)
+predictors$feature.class <-rep(NA, length(predictors$var.name))
+predictors$feature.class[grep(pattern="Chronic.Condition", x=predictors$var.name)] <- "Chronic Condition"
+predictors$feature.class[grep(pattern="Diagnosis", x=predictors$var.name)] <- "Diagnosis"
+predictors$feature.class[grep(pattern="Procedure", x=predictors$var.name)] <- "Procedure"
 
 # Visualize it
-perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
-  geom_bar(position="dodge",stat="identity") +
-  geom_text()+ggtitle("Compare Performance Measure")
+predictors%>%
+  mutate(order=row_number())%>%
+  filter(order<=50)%>%
+  ggplot(aes(x=order, y=entropy, fill=factor(feature.class))) +
+    geom_point( stat="identity") + 
+  geom_text(aes(label=var.name,check_overlap=TRUE, size=100, angle=45, colour =factor(feature.class)))+
+  xlab("Order of Feature Importance") + ylab("Entropy")+
+    ggtitle("Feature Importance")+
+  theme(legend.position='none')+
+  xlim(c(-5,55)) 
+
+ 
+```
+
+
+**Performance measure**
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
+# performance measure
+accuracy<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]
+                                                                    
+sensitivity<-prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
+                                                                        
+specificity<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1])
+  
+   
+perf$value[9]<-accuracy
+                                                                    
+perf$value[7]<-sensitivity
+                                                                        
+perf$value[8]<-specificity
+
+perf$model[7:9]<-"Decision Tree"  
+ 
+
+# Visualize it
+perf%>% na.omit()%>%
+  ggplot(aes(x=model, y=value,color=factor(model), label=value))+
+    geom_point() +
+  geom_text() +ggtitle("Compare Performance Measure")+
+  facet_grid(Measure~.,scales = "free_y")+
+  theme(legend.position="bottom")
+ 
 ```
 
 
 ###Visualize the Best Pruned Decision Tree
 
-```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=12}
-prune.fit<-prune(fit, cp=fit$cptable[which.max(perf.model2$sensitivity),"CP"])
- 
-plot(prune.fit, uniform=TRUE, main="Classification Tree")
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=15}
+plot(fit, uniform=TRUE, main="Classification Tree")
 text(prune.fit, use.n=TRUE, cex=.8, col="red")
 ```
+
+**The optimal tree is too complex for interpretation.**
 
 
 
@@ -590,25 +655,24 @@ text(prune.fit, use.n=TRUE, cex=.8, col="red")
 
 **There is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the run: Each tree is constructed using a different bootstrap sample from the original data; About one-third of the cases are left out of the bootstrap sample and not used in the construction of the kth tree; Put each case left out in the construction of the kth tree down the kth tree to get a classification. In this way, a test set calssificaiton is obtained for each case in about one-third of the trees. At the end of the run, take j to be the class that got most of the votes every time case n was oob. The proportion of times that j is not equal to the true class of n avergae over all cases is the oob error estimation.**
 
-**We are going to use the top 100 features selected by mutual inforamtion, because of computation time and capacity here.**
+**To save computation time,we only onclude first 100 features selected by entropy.**
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
 library(randomForest)
 set.seed(02138)
-
+ 
 mydata<-data.frame(x=X[,mi$var.name[mi$order<=100]],y=as.factor(Y))
 TrainIndex  <- createDataPartition(y=seq(1,nrow(mydata),1), p=0.8, times=1)
 train_set <-mydata[TrainIndex$Resample1,]
 test_set <-mydata[-TrainIndex$Resample1,]
  
-fit<-randomForest(y~., data=train_set, ntree=100, keep.forest=TRUE, importance=TRUE)
+fit<-randomForest(y~., data=train_set, ntree=50, keep.forest=TRUE, importance=TRUE)
 pred <- predict(fit, type='class',newdata=test_set[,-ncol(test_set)] )
 
 ```
 
 **Let's visualize the feature importance, which represents the mean decrease in node impurity).**
-```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=15}
-importance(fit, type=1)
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=12, fig.height=12}
 
 # visualize it
 dat<-data.frame(imp=importance(fit, type=1)[order(-importance(fit, type=1))], var.name=rownames(importance(fit, type=1))[order(-importance(fit, type=1))])%>%
@@ -618,34 +682,40 @@ dat$feature.class <-rep(NA, length(dat$var.name))
 dat$feature.class[grep(pattern="Chronic.Condition", x=dat$var.name)] <- "Chronic Condition"
 dat$feature.class[grep(pattern="Diagnosis", x=dat$var.name)] <- "Diagnosis"
 dat$feature.class[grep(pattern="Procedure", x=dat$var.name)] <- "Procedure"
-
-dat%>%ggplot(aes(x=order, y=imp, fill=factor(feature.class))) +
+ 
+# Visualize it
+dat%>%
+  mutate(order=row_number())%>%
+  filter(order<=50)%>%
+  ggplot(aes(x=order, y=imp, fill=factor(feature.class))) +
     geom_point( stat="identity") + 
   geom_text(aes(label=var.name,check_overlap=TRUE, size=100, angle=45, colour =factor(feature.class)))+
   xlab("Order of Feature Importance") + ylab("mean decrease in node impurity")+
     ggtitle("Feature Importance")+
   theme(legend.position='none')+
-  xlim(c(-5,105))
-
+  xlim(c(-5,55)) 
 ```
 
 **Let's compare performance measure**
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
  
-perf$value[12]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
+perf$value[12]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]
                                                                     
-perf$value[10]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]))
+perf$value[10]<-prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
                                                                         
-perf$value[11]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1]))
+perf$value[11]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1])
 
 perf$model[10:12]<-"Random Forest"  
 
-tbl_df(perf)
+ 
 
 # Visualize it
-perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
-  geom_bar(position="dodge",stat="identity") +
-  geom_text()+ggtitle("Compare Performance Measure")
+perf%>% na.omit()%>%
+  ggplot(aes(x=model, y=value,color=factor(model), label=value))+
+    geom_point() +
+  geom_text() +ggtitle("Compare Performance Measure")+
+  facet_grid(Measure~.,scales = "free_y")+
+  theme(legend.position="bottom")
 ```
 
  
@@ -662,7 +732,7 @@ perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
 
 ![Weak Learner](AdaBoost Weak Learner.PNG). 
 
-**We are going to use the top 100 features selected by mutual inforamtion, because of computation time and capacity here.**
+**To save computation time,we only include first 100 features selected by entropy.**
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
 library(ada)
 library(caret)
@@ -679,7 +749,7 @@ pred <-predict(fit,test_set [,-ncol(test_set )])
 ```
 
 **Let's visualize the feature importance**
-```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=15, fig.height=15}
+```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=12, fig.height=12}
 varplot(fit)
 ```
 
@@ -687,20 +757,34 @@ varplot(fit)
 **Let's compare performance measure**
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
  
-perf$value[15]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
+perf$value[15]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]
                                                                     
-perf$value[13]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]))
+perf$value[13]<-prop.table(table(pred, test_set[,ncol(test_set)]))[2,2]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,2]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,2])
                                                                         
-perf$value[14]<-scales::percent(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1]))
+perf$value[14]<-prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]/(prop.table(table(pred, test_set[,ncol(test_set)]))[1,1]+prop.table(table(pred, test_set[,ncol(test_set)]))[2,1])
 
 perf$model[13:15]<-"Ada Boosting"  
 
-tbl_df(perf)
-
 # Visualize it
-perf%>% ggplot(aes(x=Measure, y=value, fill=model, label=value))+
-  geom_bar(position="dodge",stat="identity") +
-  geom_text()+ggtitle("Compare Performance Measure")
+perf%>% na.omit()%>%
+  ggplot(aes(x=model, y=value,color=factor(model), label=value))+
+    geom_point() +
+  geom_text() +ggtitle("Compare Performance Measure")+
+  facet_grid(Measure~.,scales = "free_y")+
+  theme(legend.position="bottom")
 ```
 
+ 
+# Part 7: Discussion
 
+**LASSO: it clearly does not yield the best performing model, and in fact, the sensitivity is very low, but an advantage is that the coefficients are interpretable in the same way that the usual logistic regression coefficients are interpreted. E.g., having a certain feature results in a increase in the log odds of being a high cost patient of X amount, where X is the coefficient corresponding to that feature.**
+
+**Naive Bayes: based on Bayes' rule and independence assumption, works surprisingly well, especially high sensitivity rate. However, there is no directly interpretable decision rule can be drawn from it.**
+
+**Decision Tree: recursive dividing sample space and make interpretable decision rule, however, the inflexible nature of the division mechanism makes the prediciton performance not as optimal as other methods, and in this case, the interpretability is not that good.**
+
+**Random Forest: based on two great ideas -- Bootstrapping and Ensemble voting, works well which is not surprising. However, the result lacks interpretability.**
+
+**Boosting: based on the idea of Ensemble voting, has the same disadvantage as RF which is lack of interpretability.**
+
+**Due to the high dimensionality nature of the problem, no single algorithm excels in all three performance measure and interpretability. But some of them works well enough in the sense that we could have high percentage target rate among true high cost patients cohort, and also overall accuracy. All algorithm have some measure of feature importance, we can compare across them and draw common set of features, further research is needed to make this project's result into actionable clinical meaningful evidence.**
