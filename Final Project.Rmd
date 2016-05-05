@@ -14,27 +14,27 @@ Our GitHub repository is: [GitHub](https://github.com/Xiner-Shirley-Paula/DataSc
 
 # Part 1: Overview and Motivation 
 
-**The rising cost of healthcare is one of the world's most important problems. Healthcare policy researchers have devoted much effort toward finding solutions to the fast growth in health care spending over the past decade. Research has provided evidence that the growth is linked to modifiable population risk factors such as obesity and strss. Rising disease prevalence and new medical treatments account for nearly two-thirds of the rising spending. As MA residents, we are directly concerned with how the state controls its healthcare cost. As one article in Boston Globe put it, "The soaring costs of insuring the state's poorest residents frove health care spending in MA up 4.8 percent last year, double the rate of growth in 2013, dealing a stback to the state's effort to control medical costs."**
+**The rising cost of healthcare is one of the world's most important problems. Healthcare policy researchers have devoted much effort toward finding solutions to the fast growth in health care spending over the past decade. Research has provided evidence that the growth is linked to modifiable population risk factors such as obesity and stress. Rising disease prevalence and new medical treatments account for nearly two-thirds of the rising spending. As MA residents, we are directly concerned with how the state controls its healthcare cost. As one article in Boston Globe put it, "The soaring costs of insuring the state's poorest residents drove health care spending in MA up 4.8 percent last year, double the rate of growth in 2013, dealing a setback to the state's effort to control medical costs."**
 
-**Therefor, predicting such costs with accuracy is a significant first step in addressing this problem, and may reveal insights into the nature of the key drivers of costs.**
+**Therefore, predicting such costs with accuracy is a significant first step in addressing this problem, and may reveal insights into the nature of the key drivers of costs.**
 
 # Part 2: Related Work 
 
-**A couple published articles inspired us to apply machine learning or data mining techniques to dig further into this promising topic.**
+**A couple published articles inspired us to apply machine learning and data mining techniques to dig further into this promising topic.**
 
 - [Algorithmic Prediction of Health-Care Costs](http://people.csail.mit.edu/gjw/papers/healthcare.pdf)
-- [Predicting Costs Among Medicare beneficiries With Heart Failure](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3288564/)
+- [Predicting Costs Among Medicare beneficiaries With Heart Failure](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3288564/)
 - [Using Diagnoses to Describe Populations and Predict Costs](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4194673/)
 
 # Part 3: Data
 
 **Our data source comes from Centers for Medicare and Medicaid Limited Data Set Files, which records medicare claims happened in all medical settings. The original data files we will derive our analytic dataset from, includes: Denominator File, Inpatient File, Outpatient Fil, Carrier File, Skilled Nursing Facility File, Hospice File, Home Health Agency File, and Durable Medical Equipment File. They cover all medical claims and associated costs for Medicare FFS beneficiaries.**
 
-**So let us explain what claims data is. Medical claims are generated when a patient vitis a doctor. They include diagnosis code, precedures codes, as well as costs. Claims data are electronically available, they are standardized and well-established codes. However, since humans generate them, they are 100% accurate. Also, claims for hospital visits can be vague. These limitations push us to work harder to find signals from noise. Or in other words, we want to find valuable information from chaos reality. This is what we do: Reality Mining!**
+**So let us explain what claims data is. Medical claims are generated when a patient visits a doctor. They include diagnosis codes, procedure codes, as well as costs. Claims data are electronically available, they are standardized and well-established codes. However, since humans generate them, they are 100% accurate. Also, claims for hospital visits can be vague. These limitations push us to work harder to find signals from noise. Or in other words, we want to find valuable information from chaos reality. This is what we do: Reality Mining!**
 
 **In creating analytic dataset for use, our objective is to model future costs with past medical history. We randomly select 20% sample of Massachusetts Medicare Fee-For-Service Beneficiaries who was fully-insured during 2012 and 2013 and who did not die. We use claims during 01/01/2012 to 12/31/2012 to create chronic disease indicators, diagnosis indicators, and procedures indicators, and we use claims during 01/01/2013 to 12/31/2013 to create binary indicator for top 10% high cost patients.**
  
-**Our data prepare phase includes collecting claims associated with the same patients and aggregate information to patinet-level. Our final analytic dataset includes:**
+**Our data prepare phase includes collecting claims associated with the same patients and aggregate information to patient-level. Our final analytic dataset includes:**
 
 -  70 Chronic Disease indicators, e.g. HCC (Hierarchical Condition Category)
 -  283 Diagnosis indicator, e.g. DXCCS (Diagnosis Clinical Classification Software)
@@ -53,18 +53,18 @@ library(tidyr)
 library(infotheo)
 library(stringr)
 
-# 20% sample Massachussetts Medicare Covered Beneficiaries' demographic information
+# 20% sample Massachusetts Medicare Covered Beneficiaries' demographic information
 patient <-read_csv("data/Patient.csv")
 patient <- patient %>%
    mutate(RACE=ifelse(race=="White",1, ifelse(race=="Black",2,ifelse(race=="Hispanic",3,4))))
  
 
-# Medical spending at 2013, some installpeople don't have record in this dataset simply because they didn't have any medical events/spending, so we need to replace NA with 0 later
+# Medical spending in 2013, some people don't have record in this dataset simply because they didn't have any medical events/spending, so we need to replace NA with 0 later
 spending2013 <-read_csv("data/Spending2013.csv")
 spending2013 <- spending2013%>% 
   select(BENE_ID, Spending2013)
 
-# Medical spending at 2012, some people don't have record in this dataset simply because they didn't have any medical events/spending, so we need to replace NA with 0 later
+# Medical spending in 2012, some people don't have record in this dataset simply because they didn't have any medical events/spending, so we need to replace NA with 0 later
 spending2012 <-read_csv("data/Spending2012.csv")
 spending2012 <- spending2012%>% 
   replace_na(list(IP=0, OP=0, Carrier=0, HHA=0, Hospice=0, SNF=0, DME=0)) %>% 
@@ -80,7 +80,7 @@ HCC.label$"HCC No."<-  word(HCC.label$"HCC No.",1)
 names(hcc)[match(HCC.label$"HCC No.", names(hcc))]<-  HCC.label$'HCC Name' 
 names(hcc)[-1]<-paste("Chronic Condition:", names(hcc)[-1], sep='')
 
-# Diagnosis Clinical Classification: This is clinically meaningful grouping for 14,000 diagnosis codes  into 200+ groups. This dataset contains one row per patient, with columns as number of diagnosis detected during the entire year for individual CCS, for example, if CCS1=10 for patient 1, it means that patient was diagnosed for 10 times by doctors having a condition broadly described as CCS1. The intuition here is that more diagnoses, more often that patient had a medical event adn thus more often cost would occur. CCS is related to HCC but not identical, because HCC only captures the chronical part of disease, but CCS captures both chronical and acute disease. For example, cancer is indicated by both HCC and CCS, but a hip/knee frature maybe only captureed by CCS. So you can imagine HCC and CCS related but not identical, we could explore how to incorporate them in model.
+# Diagnosis Clinical Classification: This is clinically meaningful grouping for 14,000 diagnosis codes  into 200+ groups. This dataset contains one row per patient, with columns as number of diagnosis detected during the entire year for individual CCS, for example, if CCS1=10 for patient 1, it means that patient was diagnosed for 10 times by doctors having a condition broadly described as CCS1. The intuition here is that more diagnoses, more often that patient had a medical event and thus more often cost would occur. CCS is related to HCC but not identical, because HCC only captures the chronic part of disease, but CCS captures both chronic and acute disease. For example, cancer is indicated by both HCC and CCS, but a hip/knee fracture maybe only captured by CCS. So you can imagine HCC and CCS related but not identical, we could explore how to incorporate them in model.
 dxccs <-read_csv("data/dxCCS.csv")
 dxccs.label<-read_csv("data/dxCCS_variable_list.csv") 
 # de-duplicate
@@ -104,7 +104,7 @@ pr.label<-pr.label[!is.na(match.index),]
 names(pr)[match.index[!is.na(match.index)]]<-  pr.label$"description"
 names(pr)[-1]<-paste("Procedure:", names(pr)[-1], sep='') 
 
-# Merge with patient file, trandform data frame into matrix, with each row as patient  
+# Merge with patient file, transform data frame into matrix, with each row as patient  
 patient.level <-select(patient, BENE_ID, AGE, SEX, RACE) %>%
       left_join(spending2013, by="BENE_ID")%>%  
       left_join(spending2012, by="BENE_ID")%>%
@@ -141,7 +141,7 @@ prop.table(table(Y))
 
 # Part 4: Exploratory Data Analysis (EDA)
 
-First, we look at demographics information: Age, Gender, and Race.
+First, we look at demographic information: Age, Gender, and Race.
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
 # Distribution of Age
@@ -186,13 +186,13 @@ patient.level%>%
   ggtitle("Medical Cost at 2013 versus Medical Cost at 2012")
 ```
 
-**We could clearly see that, spending pattern is so consistent for Medicare beneficiaries, in the sense that, two subsequent years' medical costs could nearly perfectly predict each other. However, we don't know if it is true for general population. At least, it tells us that, for Medicare beneficires, typically older population >=65, if we know their past year's medical cost, their next year's cost is predictable with high confidence.  And some people (red dots) are consistently high medical resource utilizers; while others (blue dots) are consistently 0 utilizers, they are healthy population; the rest falling in the middle are relatively healthy and would not drive the total healthcare cost up dramatically. The red dots are the population we care most about. They are the sicker population which have more chronic diseases which need long-term medical assistance.**
+**We could clearly see that, spending pattern is so consistent for Medicare beneficiaries, in the sense that, two subsequent years' medical costs could nearly perfectly predict each other. However, we don't know if it is true for general population. At least, it tells us that, for Medicare beneficiaries, typically older population >=65, if we know their past year's medical cost, their next year's cost is predictable with high confidence. And some people (red dots) are consistently high medical resource utilizers; while others (blue dots) are consistently 0 utilizers, they are healthy population; the rest falling in the middle are relatively healthy and would not drive the total healthcare cost up dramatically. The red dots are the population we care most about. They are the sicker population which have more chronic diseases which need long-term medical assistance.**
 
  
 
 # Part 5: Feature Selection 
 
-**The dataset contains 70 chrnic condition indicators (HCC),283 Diagnosis Groups (DXCCS), 105 Procedure categories, which leads to 458 potential features. Techinically, we need to reduce "the curse of dimensionality"; practically, if we build an algorithm only works if we know all these information about a patient, it's impossible to implement at clinical setting, and also provides no insight about who will be high resource utilizers, what their characteristics are. Thus, the first task for us is to select features with high predictive power, and reduce the "curse of dimensionality".**
+**The dataset contains 70 chronic condition indicators (HCC), 283 Diagnosis Groups (DXCCS), 105 Procedure categories, which leads to 458 potential features. Technically, we need to reduce "the curse of dimensionality"; practically, if we build an algorithm that only works if we know all these information about a patient, it would be impossible to implement at clinical setting, and would also provide no insight into who will be high resource utilizers and what their characteristics are. Thus, the first task for us is to select features with high predictive power, and reduce the "curse of dimensionality".**
 
  
 
@@ -228,7 +228,7 @@ mi$feature.class[grep(pattern="Procedure", x=mi$var.name)] <- "Procedure"
 
 ```
 
-**Now, visualize feature importance by mutual information. We have standardized mutual information as the ratio to the largest mutual information, therefore, the most importance feature in terms of mutual information with high cost status has mutual inforamtion %=1.**
+**Now, visualize feature importance by mutual information. We have standardized mutual information as the ratio to the largest mutual information, therefore, the most important feature in terms of mutual information with high cost status has mutual information %=1.**
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=12, fig.height=12}
 
@@ -284,7 +284,7 @@ testY <-Y[-TrainIndex$Resample1]
 
 ```
 
-**We use the cv.glmnet method to conduct 10-fold cross validation to find optimal lambda, using misclassifcation error as the criterion. Although we would prefer to use sensitivity as the criterion, the glmnet CV method only allows misclassification error and auc as criteria for model selection.**
+**We use the cv.glmnet method to conduct 10-fold cross validation to find optimal lambda, using misclassification error as the criterion. Although we would prefer to use sensitivity as the criterion, the glmnet CV method only allows misclassification error and auc as criteria for model selection.**
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE }
 # Choose lambda via cross-validation
@@ -297,7 +297,7 @@ The following plot shows the models (with different lambda values) that glmnet h
 plot(CV)
 ```
 
-**The optimal regularization parameters identified by the cv.glmnet method are shown below. Lmin gives the model with the smallest misclassification error. L gives the most regularized model such that error is within one standard error of the minimum error model. By having a higher degree of regularizion, the model given by L is better protected against overfitting, whereas the Lmin has a higher chance of overfitting, but better prediction performance.**
+**The optimal regularization parameters identified by the cv.glmnet method are shown below. Lmin gives the model with the smallest misclassification error. L gives the most regularized model such that error is within one standard error of the minimum error model. By having a higher degree of regularization, the model given by L is better protected against overfitting, whereas the Lmin has a higher chance of overfitting, but better prediction performance.**
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
 L=CV$lambda.1se
@@ -410,9 +410,9 @@ We need to model the class-conditional probability distribution for each feature
 
 ### Cross Validation  
  
-**Cross-validation, is a model validation technique for assessing how the results of a statisitcal analysis will generalize to an independent data set. It is mainly used in settings where the goal is prediction (in our case), and one wants to estimate how accurately a predictive mode will perform in practice. In a prediction problem, a model is usually given a dataset of known data on which training is run (training dataset), and a dataset of unkown data against which the model is tested (testing dataset). The goal of cross validation is to define a dataset to "test" the model in the training phase, in order to limit problem like overfitting, given an insight on how the model will generalize to an independentl dataset (i.e., who will be high cost patients in next year, given previous year information, but not limited to 2012 and 2013 data).**
+**Cross-validation, is a model validation technique for assessing how the results of a statistical analysis will generalize to an independent data set. It is mainly used in settings where the goal is prediction (in our case), and one wants to estimate how accurately a predictive mode will perform in practice. In a prediction problem, a model is usually given a dataset of known data on which training is run (training dataset), and a dataset of unknown data against which the model is tested (testing dataset). The goal of cross validation is to define a dataset to "test" the model in the training phase, in order to limit problem like overfitting, given an insight on how the model will generalize to an independent dataset (i.e., who will be high cost patients in next year, given previous year information, but not limited to 2012 and 2013 data).**
 
-**Considering the huge size of our dataset (141254 rows, 458 columns), 10-folds cross validation would be too time consuming and computational demaning. We split our dataset into 80% as training and 20% as validation/testing.**
+**Considering the huge size of our dataset (141254 rows, 458 columns), 10-folds cross validation would be too time consuming and computationally demaning. We split our dataset into 80% as training and 20% as validation/testing.**
 
 #### Tuning Parameter: 
 
@@ -503,7 +503,7 @@ perf%>% na.omit()%>%
 
 ## Model 3: Decision Tree
 
-**Unlike Naive Bayes we have discussed, a classification tree partitions the feature space in a recursive manner and fit local methods in each region instead of a global model in a large feature space. Its most attractive advantages are interpretability and built-in feature selection by the impurity measure "information gain".**
+**Unlike Naive Bayes, a classification tree partitions the feature space in a recursive manner and fit local methods in each region instead of a global model in a large feature space. Its most attractive advantages are interpretability and built-in feature selection by the impurity measure "information gain".**
 
 ### Overfitting and Pruning
 
@@ -513,7 +513,7 @@ perf%>% na.omit()%>%
 
 **The effective of tree depends on how complex the tree grows, that is, how many split the tree contains. Traditionally, decision tree uses the 10-fold cross-validation error (xerror), which is the misclassification rate relative to the simplest tree with only the root node and no splitting. Thus, xerror=1 when nspli=0. From the misclassification perspective, since the xerror achieves minimum with no splitting, the best tree would be just assign every patient as non-high cost category.** 
 
-**Thus, we use sensitivity, specificity, and accuracy together as performance measures, and 80&-20% split, to prune the tree and tune the parameter "nplit".**
+**Thus, we use sensitivity, specificity, and accuracy together as performance measures, and 80-20% split, to prune the tree and tune the parameter "nplit".**
  
  
  
@@ -653,17 +653,17 @@ text(prune.fit, use.n=TRUE, cex=.8, col="red")
 
 ## Model 4: Random Forest : (Ensemble Method)
 
-**An ensemble method makes a prediction by combining the predictions of many classifiers into a single vote. The individual classifiers are usually required to perform only slightly better than random. This means slightly more than 50% of the data are classified correctly. Such a classifier is called a weak learner. If the weak learners are random and independent, the prediction accuracy of the majority vote will increase with the number of weak learners. Since the weak learners all have to be trained on the same training set, producing random and independent weak learners is difficult. Different ensemble methods (Bagging, Boosting, and Random Forest, etc) use different strategyes to train and combine weak learners that behave relatively independent.**
+**An ensemble method makes a prediction by combining the predictions of many classifiers into a single vote. The individual classifiers are usually required to perform only slightly better than random. This means slightly more than 50% of the data are classified correctly. Such a classifier is called a weak learner. If the weak learners are random and independent, the prediction accuracy of the majority vote will increase with the number of weak learners. Since the weak learners all have to be trained on the same training set, producing random and independent weak learners is difficult. Different ensemble methods (Bagging, Boosting, and Random Forest, etc) use different strategies to train and combine weak learners that behave relatively independent.**
 
-### How Random Forest Work?
+### How do Random Forests Work?
 
-**Random forests work similar as Boosting described above, it also takes the majority votes from weak learners, but differs in terms of how to grow weak learners.** 
+**Random forests work similarly to Boosting described above, it also takes the majority votes from weak learners, but differs in terms of how to grow weak learners.** 
 
-**Random Forests grows many classification trees. Each tree gives a classificaiton, and the fores chooses the classification having the most votes over all the trees in the forest. When the training set for the current tree is drawn by sampling with replacement, about one-third of the cases are left out of the sample. This oob(out-of-bag) data is used to get a running unbiased estimate of the classification error as trees are added to the forest. It is also used to get estimates of variable importance.**
+**Random Forests grows many classification trees. Each tree gives a classification and the forest chooses the classification having the most votes over all the trees in the forest. When the training set for the current tree is drawn by sampling with replacement, about one-third of the cases are left out of the sample. This oob(out-of-bag) data is used to get a running unbiased estimate of the classification error as trees are added to the forest. It is also used to get estimates of variable importance.**
 
-**There is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the run: Each tree is constructed using a different bootstrap sample from the original data; About one-third of the cases are left out of the bootstrap sample and not used in the construction of the kth tree; Put each case left out in the construction of the kth tree down the kth tree to get a classification. In this way, a test set calssificaiton is obtained for each case in about one-third of the trees. At the end of the run, take j to be the class that got most of the votes every time case n was oob. The proportion of times that j is not equal to the true class of n avergae over all cases is the oob error estimation.**
+**There is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the run: Each tree is constructed using a different bootstrap sample from the original data; About one-third of the cases are left out of the bootstrap sample and not used in the construction of the kth tree; Put each case left out in the construction of the kth tree down the kth tree to get a classification. In this way, a test set classification is obtained for each case in about one-third of the trees. At the end of the run, take j to be the class that got most of the votes every time case n was oob. The proportion of times that j is not equal to the true class of n average over all cases is the oob error estimation.**
 
-**To save computation time,we only onclude first 100 features selected by entropy.**
+**To save computation time,we only include first 100 features selected by entropy.**
 
 ```{r,warning=FALSE, message=FALSE, cache=TRUE, fig.width=10, fig.height=8}
 library(randomForest)
@@ -785,14 +785,14 @@ perf%>% na.omit()%>%
  
 # Part 7: Discussion
 
-**LASSO: it clearly does not yield the best performing model, and in fact, the sensitivity is very low, but an advantage is that the coefficients are interpretable in the same way that the usual logistic regression coefficients are interpreted. E.g., having a certain feature results in a increase in the log odds of being a high cost patient of X amount, where X is the coefficient corresponding to that feature.**
+**LASSO: it clearly does not yield the best performing model, and in fact, the sensitivity is very low, but an advantage is that the coefficients are interpretable in the same way that the usual logistic regression coefficients are interpreted. E.g., having a certain feature results in an increase in the log odds of being a high cost patient of X amount, where X is the coefficient corresponding to that feature.**
 
-**Naive Bayes: based on Bayes' rule and independence assumption, works surprisingly well, especially high sensitivity rate. However, there is no directly interpretable decision rule can be drawn from it.**
+**Naive Bayes: based on Bayes' rule and independence assumption, works surprisingly well, especially high sensitivity rate. However, there is no directly interpretable decision rule that can be drawn from it.**
 
-**Decision Tree: recursive dividing sample space and make interpretable decision rule, however, the inflexible nature of the division mechanism makes the prediciton performance not as optimal as other methods, and in this case, the interpretability is not that good.**
+**Decision Tree: recursively divides sample space and makes interpretable decision rule, however, the inflexible nature of the division mechanism makes the prediction performance not as optimal as other methods, and in this case, the interpretability is not that good.**
 
 **Random Forest: based on two great ideas -- Bootstrapping and Ensemble voting, works well which is not surprising. However, the result lacks interpretability.**
 
 **Boosting: based on the idea of Ensemble voting, has the same disadvantage as RF which is lack of interpretability.**
 
-**Due to the high dimensionality nature of the problem, no single algorithm excels in all three performance measure and interpretability. But some of them works well enough in the sense that we could have high percentage target rate among true high cost patients cohort, and also overall accuracy. All algorithm have some measure of feature importance, we can compare across them and draw common set of features, further research is needed to make this project's result into actionable clinical meaningful evidence.**
+**Due to the high dimensionality nature of the problem, no single algorithm excels in all three performance measure and interpretability. But some of them work well enough in the sense that we could have high percentage target rate among true high cost patients cohort, and also overall accuracy. All algorithms have some measure of feature importance, we can compare across them and draw a common set of features, further research is needed to make this project's result into actionable clinical meaningful evidence.**
