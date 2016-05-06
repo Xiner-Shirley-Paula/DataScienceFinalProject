@@ -1,2 +1,2 @@
-{% include /css/bootstrap.min.css %}
-{% include /css/main.css %}
+{% include {{site.github.url}}/css/bootstrap.min.css %}
+{% include {{site.github.url}}/css/main.css %}
