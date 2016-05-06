@@ -58,7 +58,7 @@
                     <h3>Feature Selection</h3> <br>
                 
                     <p>The dataset contains 70 chronic condition indicators (HCC), 283 Diagnosis Groups (DXCCS), 105 Procedure categories, which leads to 458 potential features. Technically, we need to reduce “the curse of dimensionality”; practically, if we build an algorithm that only works if we know all these information about a patient, it would be impossible to implement at clinical setting, and would also provide no insight into who will be high resource utilizers and what their characteristics are. Thus, the first task for us is to select features with high predictive power, and reduce the “curse of dimensionality”. The usual statistics Pearson’s correlation coefficient is a measure of linear relationship for continuous variables, thus inappropriate for our case. We’ll use “information gain” or “Entropy” as a measure of predictive power for individual feature.</p>
-                    <img class="img-responsive" src="img/infogain.png" alt=""><br>
+                    <img class="img-responsive" src="img/infogain.PNG" alt=""><br>
                     <p>Now, we rank individual clinical feature by “information gain” and visualize feature importance by mutual information. We have standardized mutual information as the ratio to the largest mutual information, therefore, the most important feature in terms of mutual information with high cost status has mutual information %=1. This feature selection helps us decide what features should be included in our predictive model. The results are below. </p>
                      <img class="img-responsive" src="img/inital_feature_selection.png" alt=""><br>
                 </div>
