@@ -1,30 +1,63 @@
----
-layout: null
----
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>{{ site.title | xml_escape }}</title>
-    <description>{{ site.description | xml_escape }}</description>
-    <link>{{ site.url }}/</link>
-    <atom:link href="{{ "/feed.xml" }}" rel="self" type="application/rss+xml" />
-    <pubDate>{{ site.time | date_to_rfc822 }}</pubDate>
-    <lastBuildDate>{{ site.time | date_to_rfc822 }}</lastBuildDate>
-    <generator>Jekyll v{{ jekyll.version }}</generator>
-    {% for post in site.posts limit:10 %}
+    <title>Predicting Healthcare Cost</title>
+    <description>A BIO 260 and CSCI E107 Project</description>
+    <link>http://xiner-shirley-paula.github.io/DataScienceFinalProject/</link>
+    <atom:link href="/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Fri, 06 May 2016 06:25:06 -0400</pubDate>
+    <lastBuildDate>Fri, 06 May 2016 06:25:06 -0400</lastBuildDate>
+    <generator>Jekyll v3.1.3</generator>
+    
       <item>
-        <title>{{ post.title | xml_escape }}</title>
-        <description>{{ post.description | xml_escape }}</description>
-        <pubDate>{{ post.date | date_to_rfc822 }}</pubDate>
-        <link>{{ post.url | prepend: site.url }}</link>
-        <guid isPermaLink="true">{{ post.url | prepend: site.url }}</guid>
-        {% for tag in post.tags %}
-        <category>{{ tag | xml_escape }}</category>
-        {% endfor %}
-        {% for cat in post.categories %}
-        <category>{{ cat | xml_escape }}</category>
-        {% endfor %}
+        <title>Boosting</title>
+        <description>Boosting is historically the first ensemble method. The independence of weak learners is obtained by modifying the training data using weights after training each weak learner. The AdaBoost algorithm of Freud and Schapire was the first practiceal boosting algorithm, and remains one of the most widely used and standard. &lt;br&gt;Pseudocode for AdaBoost &lt;img src=&quot;img/picture/AdaBoost.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt;AdaBoost using Desicion Stump as Weak Learner&lt;br&gt; &lt;img src=&quot;img/picture/AdaBoostWeakLearner.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; To save computation time,we only include first 100 features selected by entropy. Below is the feature importance. &lt;img src=&quot;img/portfolio/ada_plot.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt;</description>
+        <pubDate>Thu, 17 Jul 2014 00:00:00 -0400</pubDate>
+        <link>http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/17/Boosting.html</link>
+        <guid isPermaLink="true">http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/17/Boosting.html</guid>
+        
+        
       </item>
-    {% endfor %}
+    
+      <item>
+        <title>Random Forest</title>
+        <description>An ensemble method makes a prediction by combining the predictions of many classifiers into a single vote. The individual classifiers are usually required to perform only slightly better than random. This means slightly more than 50% of the data are classified correctly. Such a classifier is called a weak learner. If the weak learners are random and independent, the prediction accuracy of the majority vote will increase with the number of weak learners. Since the weak learners all have to be trained on the same training set, producing random and independent weak learners is difficult. Different ensemble methods (Bagging, Boosting, and Random Forest, etc) use different strategies to train and combine weak learners that behave relatively independent. &lt;br&gt; How do Random Forests Work? &lt;br&gt;Random forests work similarly to Boosting described above, it also takes the majority votes from weak learners, but differs in terms of how to grow weak learners.&lt;br&gt;Random Forests grows many classification trees. Each tree gives a classification and the forest chooses the classification having the most votes over all the trees in the forest. When the training set for the current tree is drawn by sampling with replacement, about one-third of the cases are left out of the sample. This oob(out-of-bag) data is used to get a running unbiased estimate of the classification error as trees are added to the forest. It is also used to get estimates of variable importance.&lt;br&gt;There is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the run. Each tree is constructed using a different bootstrap sample from the original data; About one-third of the cases are left out of the bootstrap sample and not used in the construction of the kth tree; Put each case left out in the construction of the kth tree down the kth tree to get a classification. In this way, a test set classification is obtained for each case in about one-third of the trees. At the end of the run, take j to be the class that got most of the votes every time case n was oob. The proportion of times that j is not equal to the true class of n average over all cases is the oob error estimation.To save computation time,we only include first 100 features selected by entropy. Let’s visualize the feature importance, which represents the mean decrease in node impurity. &lt;img src=&quot;img/portfolio/forest_performance.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt;</description>
+        <pubDate>Wed, 16 Jul 2014 00:00:00 -0400</pubDate>
+        <link>http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/16/Random-Forest.html</link>
+        <guid isPermaLink="true">http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/16/Random-Forest.html</guid>
+        
+        
+      </item>
+    
+      <item>
+        <title>Decision Tree</title>
+        <description>Unlike Naive Bayes, a classification tree partitions the feature space in a recursive manner and fit local methods in each region instead of a global model in a large feature space. Its most attractive advantages are interpretability and built-in feature selection by the impurity measure “information gain”.&lt;br&gt;Overfitting and Pruning&lt;br&gt;We have built a complete but too complex tree. To grow each branch of the tree just deeply enough to perfectly classify the training data, in fact it can lead to difficulties when there is noise in the training data, or when the number of trainings is too small to produce a representative sample of the true population. In either of these cases, this can produce trees that overfits the training data. The accuracy of the tree over the trainings increases monotonically as the tree grows, however, the accuracy over the test set first increase then decreases. So we need to prune the tree.&lt;br&gt;Model Slection&lt;br&gt;The effective of tree depends on how complex the tree grows, that is, how many split the tree contains. Traditionally, decision tree uses the 10-fold cross-validation error (xerror), which is the misclassification rate relative to the simplest tree with only the root node and no splitting. Thus, xerror=1 when nspli=0. From the misclassification perspective, since the xerror achieves minimum with no splitting, the best tree would be just assign every patient as non-high cost category. Thus, we use sensitivity, specificity, and accuracy together as performance measures, and 80-20% split, to prune the tree and tune the parameter “nplit”. &lt;img src=&quot;img/cptree.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; Now we are going to prune the tree using validation set and vizualize the performance.  &lt;img src=&quot;img/treegraph.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; The accuracy is going down with the number of splits increases, this is the problem of over-fitting the training set. But the sensitivity on validation set is going up with the complexity of the tree. Somewhat surprising. We will use the maximum complexity to achieve the maximum sensitivity on independent dataset. Let&#39;s prune the tree by sensitivity, predict on validation set, and then visualize performance in terms of entropy.  &lt;img src=&quot;img/treefeat.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; This is our best Decision Tree, which is too complex for interpretation.  &lt;img src=&quot;img/portfolio/tree.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt;</description>
+        <pubDate>Tue, 15 Jul 2014 00:00:00 -0400</pubDate>
+        <link>http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/15/Decision-Tree.html</link>
+        <guid isPermaLink="true">http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/15/Decision-Tree.html</guid>
+        
+        
+      </item>
+    
+      <item>
+        <title>Naive Bayes Classifier</title>
+        <description>Bayes-optimal classification rule &lt;img src=&quot;img/picture/NBrule.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; &lt;br&gt; Why Naive Bayes and Its Assumption &lt;img src=&quot;img/picture/why.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; Naive Bayes Model &lt;img src=&quot;img/picture/NB1.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; We need to model the class-conditional probability distribution for each feature. Since all the features are categorical (binary), the Bernoulli distribution (or multinomial distribution in more general case) is an ideal first choice. We can think of the data sampled following the Bayes model intuitively as two steps. First, Randomly sample a patient from a Bernoulli process with probability p(Y=1), where Y=1 if the patient was high-cost in 2013.Then the patient decide each of his/her feature (among demographic and clinical) from a Bernoulli dsitribution.&lt;img src=&quot;img/picture/NB2.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; Parameter Estimation &lt;img src=&quot;img/picture/NBEstimation.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; Cross Validation &lt;br&gt;Cross-validation, is a model validation technique for assessing how the results of a statistical analysis will generalize to an independent data set. It is mainly used in settings where the goal is prediction (in our case), and one wants to estimate how accurately a predictive mode will perform in practice. In a prediction problem, a model is usually given a dataset of known data on which training is run (training dataset), and a dataset of unknown data against which the model is tested (testing dataset). The goal of cross validation is to define a dataset to “test” the model in the training phase, in order to limit problem like overfitting, given an insight on how the model will generalize to an independent dataset (i.e., who will be high cost patients in next year, given previous year information, but not limited to 2012 and 2013 data). &lt;br&gt;Considering the huge size of our dataset (141254 rows, 458 columns), 10-folds cross validation would be too time consuming and computationally demaning. We split our dataset into 80% as training and 20% as validation/testing.&lt;br&gt; Our tuning parameter for naive bayes is the number of features included in model. We could imagine that, if include all information will inevitably overfit the data, while include too few information will not have high predictive model. Therefore, we need to find a sweet-spot in between. &lt;img src=&quot;img/nbgraph.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; Above is the model performace. For our purpose, what matters the most is sensitivity, that is, how many future high cost patients could be identified correctly. Since if we can identify them, then health care system could provide preventive care to bring potential medical resource utilization down. The accuracy and specificity are all quite stably high in level while number of features included in the model are increasing, therefore, our problem comes down to find the optimal value for sensitivity. Starting from 300+, we could identify 50%+ high cost patients consistently, no matter whether we include 300 or 400 features. &lt;br&gt; We found that the optimal number of features is 90.</description>
+        <pubDate>Mon, 14 Jul 2014 00:00:00 -0400</pubDate>
+        <link>http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/14/Naive-Bayes-Classifier.html</link>
+        <guid isPermaLink="true">http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/14/Naive-Bayes-Classifier.html</guid>
+        
+        
+      </item>
+    
+      <item>
+        <title>Lasso</title>
+        <description>LASSO (least absolute shrinkage and selection operator) is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the statistical model it produces. LASSO forces the sum of the absolute value of the coefficients to be less than a fixed value, which results in certain coefficients to be set to be zero, effectively removing those variables from the model, making the model simpler and more interpretable. The regularization parameter, lambda, governs the degree to which the coefficients are penalized. &lt;br&gt;&lt;br&gt; To implement LASSO regression in this project, we use glmnet. Glmnet is an R package that fits a generalized linear model via penalized maximum likelihood. The regularization path is computed for the LASSO penalty at a grid of values for the regularization parameter lambda. &lt;br&gt;&lt;br&gt; Here we predict whether a patient will be in the top 10% in terms of 2013 spending based on their chronic conditions indicators. The LASSO model is trained using 80% of the data, and then validating using the remaining 20%. The sensitivity and specificity are reported for the test set.&lt;img src=&quot;img/glmnet.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt; The optimal regularization parameters identified by the cv.glmnet method are shown below. Lmin gives the model with the smallest misclassification error. L gives the most regularized model such that error is within one standard error of the minimum error model. By having a higher degree of regularization, the model given by L is better protected against overfitting, whereas the Lmin has a higher chance of overfitting, but better prediction performance. &lt;br&gt;&lt;br&gt;We now fit a the model with Lmin for lambda. (Note, we tried fitting the model with L, but the sensitivity reported for the test set prediction was lower in this model, so we chose the Lmin value). Let us see what features are selected by LASSO and their respective importance.&lt;img src=&quot;img/portfolio/lasso.png&quot; class=&quot;img-responsive img-centered&quot; alt=&quot;&quot;&gt;</description>
+        <pubDate>Sun, 13 Jul 2014 00:00:00 -0400</pubDate>
+        <link>http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/13/LASSO.html</link>
+        <guid isPermaLink="true">http://xiner-shirley-paula.github.io/DataScienceFinalProject/2014/07/13/LASSO.html</guid>
+        
+        
+      </item>
+    
   </channel>
 </rss>
