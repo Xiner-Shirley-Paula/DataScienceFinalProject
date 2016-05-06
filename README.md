@@ -1,32 +1,8 @@
-Freelancer Jekyll theme
-=========================
+#Predicting Health-care Cost Among Medicare Beneficiaries in Massachusetts
+Our Final Project for  Introduction to Data Science: BIO 260 and CSCI E107
 
-Jekyll theme based on [Freelancer bootstrap theme ](http://startbootstrap.com/templates/freelancer/)
+The rising cost of healthcare is one of the world's most important problems. Healthcare policy researchers have devoted much effort toward finding solutions to the fast growth in health care spending over the past decade. Research has provided evidence that the growth is linked to modifiable population risk factors such as obesity and stress. Rising disease prevalence and new medical treatments account for nearly two-thirds of the rising spending. As MA residents, we are directly concerned with how the state controls its healthcare cost. As one article in Boston Globe put it, "The soaring costs of insuring the state's poorest residents drove health care spending in MA up 4.8 percent last year, double the rate of growth in 2013, dealing a setback to the state's effort to control medical costs."
 
-## How to use
- - Place a image in `/img/portoflio/`
- - Replace `you@email.com` in `_includes/contact_static.html` with your email address. refer to [formspree](http://formspree.io/) for more information.
- - Create posts to display your projects. Use the follow as an example:
-```txt
----
-layout: default
-modal-id: 1
-date: 2014-07-18
-img: cabin.png
-alt: image-alt
-project-date: July 2014
-client: The Client
-category: Web Development
-description: The description of the project
+Therefore, predicting such costs with accuracy is a significant first step in addressing this problem, and may reveal insights into the nature of the key drivers of costs.
 
----
-```
-
-## Demo
-View this jekyll theme in action [here](https://jeromelachaud.github.io/freelancer-theme)
-
-## Screenshot
-![screenshot](https://raw.githubusercontent.com/jeromelachaud/freelancer-theme/master/screenshot.png)
-
-=========
-For more details, read the [documentation](http://jekyllrb.com/)
+To learn more, visit: http://xiner-shirley-paula.github.io/DataScienceFinalProject/
