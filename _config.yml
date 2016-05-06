@@ -1,7 +1,8 @@
 # Site settings
 title: Predicting Healthcare Cost
 subtitle: A BIO 260 and CSCI E107 Project
-baseurl: http://xiner-shirley-paula.github.io/DataScienceFinalProject
+url: http://xiner-shirley-paula.github.io
+baseurl: /DataScienceFinalProject
 description: "A BIO 260 and CSCI E107 Project"
 title_two: "Among Medicare Beneficiaries in Massachusetts"
 meta_author: Xiner Zhou Paula Jacobs Shirley Galbiati
