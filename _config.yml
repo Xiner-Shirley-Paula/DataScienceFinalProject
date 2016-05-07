@@ -36,7 +36,7 @@ related:
     url: http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4194673/
 
 # Credits content
-credits: 'Freelancer is a free to use, open source Bootstrap theme created by <a href="http://startbootstrap.com">Start Bootstrap</a>. This Jekyll implementation can be found at <a href="https://github.com/jeromelachaud/freelancer-theme"> this github page.</a> Stockphotos are free from <a href="https://www.pexels.com/">Pexels</a> and <a href="http://barnimages.com/">barnimages</a>. Icons from Font <a href="http://fortawesome.github.io/Font-Awesome/3.2.1/icons/">Font Awesome</a>'
+credits: 'Freelancer is a free to use, open source Bootstrap theme created by <a href="http://startbootstrap.com">Start Bootstrap</a>. This Jekyll implementation can be found at <a href="https://github.com/jeromelachaud/freelancer-theme"> this github page.</a> Stockphotos are free from <a href="https://www.pexels.com/">Pexels</a>. Icons from Font <a href="http://fortawesome.github.io/Font-Awesome/3.2.1/icons/">Font Awesome</a>'
 
 # Build settings
 markdown: kramdown
