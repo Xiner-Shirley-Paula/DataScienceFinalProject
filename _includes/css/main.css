@@ -39,13 +39,48 @@ h6 {
 hr.star-light, hr.plus-light, 
 hr.star-primary, hr.plus-primary,hr.chart-light, 
 hr.chart-primary,hr.hospital-light, 
-hr.hospital-primary {
+hr.hospital-primary,hr.camera-light, 
+hr.camera-primary, hr.doctor-light, 
+hr.doctor-primary, hr.discussion-light, 
+hr.discussion-primary{
     margin: 25px auto 30px;
     padding: 0;
     max-width: 250px;
     border: 0;
     border-top: solid 5px;
     text-align: center;
+}
+
+hr.discussion-light:after,
+hr.discussion-primary:after {
+    content: "\f044";
+    display: inline-block;
+    position: relative;
+    top: -.8em;
+    padding: 0 .25em;
+    font-family: FontAwesome;
+    font-size: 2em;
+}
+
+hr.doctor-light:after,
+hr.doctor-primary:after {
+    content: "\f0f0";
+    display: inline-block;
+    position: relative;
+    top: -.8em;
+    padding: 0 .25em;
+    font-family: FontAwesome;
+    font-size: 2em;
+}
+hr.camera-light:after,
+hr.camera-primary:after {
+    content: "\f16a";
+    display: inline-block;
+    position: relative;
+    top: -.8em;
+    padding: 0 .25em;
+    font-family: FontAwesome;
+    font-size: 2em;
 }
 
 hr.star-light:after,
@@ -92,20 +127,20 @@ hr.hospital-primary:after {
     font-size: 2em;
 }
 
-hr.star-light, hr.plus-light, hr.chart-light, hr.hospital-light  {
+hr.star-light, hr.plus-light, hr.chart-light, hr.hospital-light,hr.camera-light, hr.doctor-light , hr.discussion-light   {
     border-color: #fff;
 }
 
-hr.star-light:after , hr.plus-light:after, hr.chart-light:after, hr.hospital-light:after    {
+hr.star-light:after , hr.plus-light:after, hr.chart-light:after, hr.hospital-light:after, hr.camera-light:after, hr.doctor-light:after , hr.discussion-light:after  {
     color: #fff;
     background-color: #{{ site.color.primary }};
 }
 
-hr.star-primary, hr.plus-primary, hr.chart-primary, hr.hospital-primary  {
+hr.star-primary, hr.plus-primary, hr.chart-primary, hr.hospital-primary ,hr.camera-primary, hr.doctor-primary , hr.discussion-primary {
     border-color: #{{ site.color.secondary }};
 }
 
-hr.star-primary:after, hr.plus-primary:after, hr.chart-primary:after, hr.hospital-primary:after  {
+hr.star-primary:after, hr.plus-primary:after, hr.chart-primary:after, hr.hospital-primary:after , hr.camera-primary:after , hr.doctor-primary:after , hr.discussion-primary:after    {
     color: #{{ site.color.secondary }};
     background-color: #fff;
 }
